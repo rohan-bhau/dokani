@@ -1,8 +1,8 @@
 import type { ErrorRequestHandler } from 'express';
 import { ZodError } from 'zod';
 import { env } from '../config/env.js';
-import { AppError } from '../lib/errors.js';
-import { logger } from '../lib/logger.js';
+import { logger } from '../config/logger.js';
+import { AppError } from '../common/errors.js';
 
 export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   const requestId = req.headers['x-request-id']?.toString() || 'unknown';

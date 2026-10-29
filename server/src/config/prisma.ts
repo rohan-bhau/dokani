@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { env } from '../config/env.js';
+import { env } from './env.js';
 import { logger } from './logger.js';
 
 const prismaClientSingleton = (): PrismaClient => {

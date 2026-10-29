@@ -3,12 +3,12 @@ import express, { type Express } from 'express';
 import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import { env } from './config/env.js';
-import { NotFoundError } from './lib/errors.js';
-import { logger } from './lib/logger.js';
+import { logger } from './config/logger.js';
+import { prisma } from './config/prisma.js';
+import { redis } from './config/redis.js';
+import { NotFoundError } from './common/errors.js';
 import { errorHandler } from './middleware/errorHandler.js';
-
-import { prisma } from './lib/prisma.js';
-import { redis } from './lib/redis.js';
+import { authRouter } from './modules/auth/auth.routes.js';
 
 export const createApp = (): Express => {
   const app = express();
@@ -50,6 +50,8 @@ export const createApp = (): Express => {
       timestamp: new Date().toISOString(),
     });
   });
+
+  app.use('/api/v1/auth', authRouter);
 
   app.use((_req, _res, next) => {
     next(new NotFoundError('Requested endpoint does not exist.'));
