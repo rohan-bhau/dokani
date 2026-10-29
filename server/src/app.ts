@@ -7,6 +7,9 @@ import { NotFoundError } from './lib/errors.js';
 import { logger } from './lib/logger.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
+import { prisma } from './lib/prisma.js';
+import { redis } from './lib/redis.js';
+
 export const createApp = (): Express => {
   const app = express();
 
@@ -20,9 +23,30 @@ export const createApp = (): Express => {
   app.use(express.json({ limit: '1mb' }));
   app.use(pinoHttp({ logger }));
 
-  app.get('/api/v1/health', (_req, res) => {
-    res.status(200).json({
-      status: 'ok',
+  app.get('/api/v1/health', async (_req, res) => {
+    let dbStatus = 'healthy';
+    let redisStatus = 'healthy';
+
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+    } catch {
+      dbStatus = 'unhealthy';
+    }
+
+    try {
+      await redis.ping();
+    } catch {
+      redisStatus = 'unhealthy';
+    }
+
+    const isHealthy = dbStatus === 'healthy' && redisStatus === 'healthy';
+
+    res.status(isHealthy ? 200 : 503).json({
+      status: isHealthy ? 'ok' : 'degraded',
+      services: {
+        database: dbStatus,
+        redis: redisStatus,
+      },
       timestamp: new Date().toISOString(),
     });
   });
