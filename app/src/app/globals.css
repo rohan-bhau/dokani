@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-surface-subtle: #F1F5F9;
+  --color-border: #E2E8F0;
+  --color-border-strong: #94A3B8;
+  --color-text: #0F172A;
+  --color-text-muted: #475569;
+  --color-primary: #047857;
+  --color-primary-hover: #065F46;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  min-height: 100vh;
+}
+
+/* Tabular figures for money, quantities, and barcode numbers */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
