@@ -1,0 +1,14 @@
+{
+  "name": "dokani-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:server": "pnpm --filter @dokani/server dev",
+    "dev:app": "pnpm --filter @dokani/app dev",
+    "dev": "pnpm --parallel --filter @dokani/server --filter @dokani/app dev",
+    "build": "pnpm --filter @dokani/shared build && pnpm --filter @dokani/server build",
+    "lint": "pnpm --recursive lint",
+    "typecheck": "pnpm --recursive typecheck"
+  },
+  "packageManager": "pnpm@12.5.1"
+}
