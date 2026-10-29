@@ -9,6 +9,8 @@ import { redis } from './config/redis.js';
 import { NotFoundError } from './common/errors.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { authRouter } from './modules/auth/auth.routes.js';
+import { productRouter } from './modules/products/product.routes.js';
+import { inventoryRouter } from './modules/inventory/inventory.routes.js';
 
 export const createApp = (): Express => {
   const app = express();
@@ -52,6 +54,8 @@ export const createApp = (): Express => {
   });
 
   app.use('/api/v1/auth', authRouter);
+  app.use('/api/v1/products', productRouter);
+  app.use('/api/v1/inventory', inventoryRouter);
 
   app.use((_req, _res, next) => {
     next(new NotFoundError('Requested endpoint does not exist.'));
