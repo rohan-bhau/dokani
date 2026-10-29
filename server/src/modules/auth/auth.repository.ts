@@ -13,31 +13,32 @@ export interface CreateTenantOwnerParams {
 
 export class AuthRepository {
   async createTenantAndOwner(params: CreateTenantOwnerParams): Promise<{ tenant: Tenant; user: User }> {
-    return prisma.$transaction(async (tx) => {
-      const tenant = await tx.tenant.create({
-        data: {
-          name: params.tenantName,
-          slug: params.slug,
-          phone: params.phone,
-        },
-      });
-
-      // Ensure system permissions exist
-      const permissionCodes = Object.values(Permission);
-      for (const code of permissionCodes) {
-        await tx.permission.upsert({
-          where: { code },
-          update: {},
-          create: { code, description: code },
+    return prisma.$transaction(
+      async (tx) => {
+        const tenant = await tx.tenant.create({
+          data: {
+            name: params.tenantName,
+            slug: params.slug,
+            phone: params.phone,
+          },
         });
-      }
 
-      const allPermissions = await tx.permission.findMany({
-        select: { id: true },
-      });
+        // Batch insert permissions in a single query
+        const permissionCodes = Object.values(Permission);
+        await tx.permission.createMany({
+          data: permissionCodes.map((code) => ({
+            code,
+            description: code,
+          })),
+          skipDuplicates: true,
+        });
 
-      // Create owner role for this tenant
-      const ownerRole = await tx.role.create({
+        const allPermissions = await tx.permission.findMany({
+          select: { id: true },
+        });
+
+        // Create owner role for this tenant
+        const ownerRole = await tx.role.create({
         data: {
           name: SystemRole.OWNER,
           tenantId: tenant.id,
@@ -67,6 +68,10 @@ export class AuthRepository {
       });
 
       return { tenant, user };
+    },
+    {
+      maxWait: 10000,
+      timeout: 30000,
     });
   }
 
