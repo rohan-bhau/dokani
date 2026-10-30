@@ -28,6 +28,8 @@ export const Permission = {
   REPORT_VIEW_OWN: 'report:view:own',
   AUDIT_LOG_VIEW: 'audit_log:view',
   PLATFORM_MANAGE: 'platform:manage',
+  EXPENSE_VIEW: 'expense:view',
+  EXPENSE_MANAGE: 'expense:manage',
 } as const;
 
 export type PermissionType = (typeof Permission)[keyof typeof Permission];

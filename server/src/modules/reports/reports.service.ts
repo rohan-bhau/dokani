@@ -41,7 +41,7 @@ export class ReportsService {
     }
 
     // 1. Sales & Revenue Aggregates
-    const [invoices, products, customers] = await Promise.all([
+    const [invoices, products, customers, expenseAggregate] = await Promise.all([
       prisma.invoice.findMany({
         where: invoiceWhere,
         include: {
@@ -56,6 +56,20 @@ export class ReportsService {
       prisma.customer.findMany({
         where: { tenantId: filter.tenantId },
         select: { id: true, dueBalance: true },
+      }),
+      prisma.expense.aggregate({
+        where: {
+          tenantId: filter.tenantId,
+          ...(filter.startDate || filter.endDate
+            ? {
+                spentOn: {
+                  ...(filter.startDate ? { gte: filter.startDate } : {}),
+                  ...(filter.endDate ? { lte: filter.endDate } : {}),
+                },
+              }
+            : {}),
+        },
+        _sum: { amount: true },
       }),
     ]);
 
@@ -94,7 +108,9 @@ export class ReportsService {
       }
     }
 
+    const totalExpenses = expenseAggregate._sum.amount ?? 0n;
     const grossProfit = totalRevenue - cogs;
+    const netProfit = grossProfit - totalExpenses;
 
     // 2. Inventory Stats
     let totalStockQuantity = 0;
@@ -131,6 +147,8 @@ export class ReportsService {
         totalDiscount: Number(totalDiscount),
         cogs: Number(cogs),
         grossProfit: Number(grossProfit),
+        totalExpenses: Number(totalExpenses),
+        netProfit: Number(netProfit),
         tenderBreakdown: {
           CASH: Number(tenderBreakdown.CASH),
           BKASH: Number(tenderBreakdown.BKASH),

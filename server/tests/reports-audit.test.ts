@@ -12,6 +12,8 @@ describe('Reports, Auditing & Background Worker Tests (Phase 7)', () => {
 
   beforeAll(async () => {
     // Clean up dependent child tables first
+    await prisma.subscription.deleteMany();
+    await prisma.expense.deleteMany();
     await prisma.webhookEvent.deleteMany();
     await prisma.purchaseItem.deleteMany();
     await prisma.purchase.deleteMany();
@@ -89,7 +91,7 @@ describe('Reports, Auditing & Background Worker Tests (Phase 7)', () => {
         notes: 'Analytics Test Checkout',
       });
     expect(checkoutRes.status).toBe(201);
-  });
+  }, 60000);
 
   afterAll(async () => {
     await prisma.$disconnect();

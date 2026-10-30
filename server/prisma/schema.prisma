@@ -43,6 +43,7 @@ model Tenant {
   purchases       Purchase[]
   auditLogs       AuditLog[]
   subscriptions   Subscription[]
+  expenses        Expense[]
 
   @@map("tenants")
 }
@@ -67,6 +68,7 @@ model User {
   customerLedgersCreated CustomerLedger[]
   purchasesCreated       Purchase[]
   auditLogs              AuditLog[]
+  expensesCreated        Expense[]
 
   @@unique([tenantId, phone])
   @@unique([tenantId, email])
@@ -550,6 +552,37 @@ model Subscription {
   @@index([planId])
   @@map("subscriptions")
 }
+
+enum ExpenseCategory {
+  RENT
+  ELECTRICITY
+  SALARY
+  TRANSPORT
+  MAINTENANCE
+  ENTERTAINMENT
+  MARKETING
+  OTHER
+}
+
+model Expense {
+  id        String          @id @default(uuid()) @db.Uuid
+  tenantId  String          @map("tenant_id") @db.Uuid
+  category  ExpenseCategory
+  amount    BigInt
+  note      String?         @db.Text
+  spentOn   DateTime        @default(now()) @map("spent_on")
+  createdBy String?         @map("created_by") @db.Uuid
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  tenant  Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator User?  @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, spentOn])
+  @@index([tenantId, category])
+  @@map("expenses")
+}
+
 
 
 

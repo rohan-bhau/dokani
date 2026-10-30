@@ -1,0 +1,92 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-and-build:
+    name: Lint, Typecheck, Test & Build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: dokani_user
+          POSTGRES_PASSWORD: dokani_password
+          POSTGRES_DB: dokani_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      PORT: 5000
+      DATABASE_URL: postgresql://dokani_user:dokani_password@localhost:5432/dokani_test
+      REDIS_URL: redis://localhost:6379
+      JWT_ACCESS_SECRET: 0123456789abcdef0123456789abcdef
+      JWT_REFRESH_SECRET: fedcba9876543210fedcba9876543210
+      CORS_ORIGIN: http://localhost:3000
+      BKASH_APP_KEY: test_bkash_key
+      BKASH_APP_SECRET: test_bkash_secret
+      BKASH_USERNAME: test_bkash_user
+      BKASH_PASSWORD: test_bkash_pass
+      BKASH_BASE_URL: https://tokenized.sandbox.bka.sh/v1.2.0-beta
+      SSLCOMMERZ_STORE_ID: test_store_id
+      SSLCOMMERZ_STORE_PASS: test_store_pass
+      SSLCOMMERZ_IS_SANDBOX: "true"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 12.5.1
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared package
+        run: pnpm --filter @dokani/shared build
+
+      - name: Typecheck all workspaces
+        run: pnpm typecheck
+
+      - name: Generate Prisma client & Push Schema
+        run: |
+          cd server
+          pnpm prisma generate
+          pnpm prisma db push --skip-generate
+
+      - name: Run Server Integration Tests
+        run: pnpm --filter @dokani/server test
+
+      - name: Build Web Application
+        run: pnpm --filter @dokani/app build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:5000
