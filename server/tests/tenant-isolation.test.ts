@@ -15,6 +15,7 @@ describe('Multi-Tenant Isolation & Authentication Tests', () => {
     await prisma.payment.deleteMany();
     await prisma.invoiceItem.deleteMany();
     await prisma.invoice.deleteMany();
+    await prisma.auditLog.deleteMany();
     await prisma.customer.deleteMany();
     await prisma.tenantCounter.deleteMany();
     await prisma.stockMovement.deleteMany();
@@ -101,5 +102,62 @@ describe('Multi-Tenant Isolation & Authentication Tests', () => {
     });
 
     expect(reuseOldRes.status).toBe(401);
+  });
+
+  it('should block unauthenticated requests with 401 Unauthorized', async () => {
+    // Unauthenticated product create
+    const prodRes = await request(app)
+      .post('/api/v1/products')
+      .send({ name: 'Hacked Product', sku: 'HACK-01', costPrice: 10, sellPrice: 20 });
+    expect(prodRes.status).toBe(401);
+
+    // Unauthenticated customer create
+    const custRes = await request(app)
+      .post('/api/v1/customers')
+      .send({ name: 'Hacked Customer', phone: '01900000000' });
+    expect(custRes.status).toBe(401);
+
+    // Unauthenticated stock adjust
+    const adjustRes = await request(app)
+      .post('/api/v1/inventory/adjust')
+      .send({ productId: '00000000-0000-0000-0000-000000000000', type: 'OPENING', quantity: 100 });
+    expect(adjustRes.status).toBe(401);
+  });
+
+  it('should reject unauthorized mutation with 403 when user has only view permissions', async () => {
+    // 1. Create a dummy user token with only view permission (no delete/update permission)
+    const { signAccessToken } = await import('../src/modules/auth/auth.jwt.js');
+    const readOnlyToken = signAccessToken({
+      userId: '11111111-1111-1111-1111-111111111111',
+      tenantId: '22222222-2222-2222-2222-222222222222',
+      permissions: ['product:view', 'customer:view'],
+    });
+
+    // 2. Attempt product deletion via Postman/curl simulation
+    const deleteRes = await request(app)
+      .delete('/api/v1/products/00000000-0000-0000-0000-000000000000')
+      .set('Authorization', `Bearer ${readOnlyToken}`);
+
+    expect(deleteRes.status).toBe(403);
+    expect(deleteRes.body.success).toBe(false);
+    expect(deleteRes.body.code).toBe('FORBIDDEN');
+
+    // 3. Attempt product update via Postman/curl simulation
+    const patchRes = await request(app)
+      .patch('/api/v1/products/00000000-0000-0000-0000-000000000000')
+      .set('Authorization', `Bearer ${readOnlyToken}`)
+      .send({ name: 'Malicious Update' });
+
+    expect(patchRes.status).toBe(403);
+    expect(patchRes.body.code).toBe('FORBIDDEN');
+
+    // 4. Attempt customer update via Postman/curl simulation
+    const custPatchRes = await request(app)
+      .patch('/api/v1/customers/00000000-0000-0000-0000-000000000000')
+      .set('Authorization', `Bearer ${readOnlyToken}`)
+      .send({ name: 'Malicious Name' });
+
+    expect(custPatchRes.status).toBe(403);
+    expect(custPatchRes.body.code).toBe('FORBIDDEN');
   });
 });

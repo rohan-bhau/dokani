@@ -41,6 +41,7 @@ model Tenant {
   customerLedgers CustomerLedger[]
   suppliers       Supplier[]
   purchases       Purchase[]
+  auditLogs       AuditLog[]
 
   @@map("tenants")
 }
@@ -64,6 +65,7 @@ model User {
   invoicesCreated        Invoice[]
   customerLedgersCreated CustomerLedger[]
   purchasesCreated       Purchase[]
+  auditLogs              AuditLog[]
 
   @@unique([tenantId, phone])
   @@unique([tenantId, email])
@@ -471,6 +473,27 @@ model PurchaseItem {
   @@index([purchaseId])
   @@map("purchase_items")
 }
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  action     String   @db.VarChar(100)
+  entityType String   @map("entity_type") @db.VarChar(100)
+  entityId   String   @map("entity_id") @db.VarChar(100)
+  details    Json?    @db.JsonB
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  userAgent  String?  @map("user_agent") @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, entityType, entityId])
+  @@map("audit_logs")
+}
+
 
 
 

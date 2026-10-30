@@ -20,3 +20,23 @@ export const requirePermissions = (...required: string[]) => {
     }
   };
 };
+
+export const requireAnyPermission = (...required: string[]) => {
+  return (_req: Request, _res: Response, next: NextFunction): void => {
+    try {
+      const { permissions } = getRequestContext();
+
+      const hasAny = required.some((reqPerm) => permissions.includes(reqPerm));
+
+      if (!hasAny) {
+        next(new ForbiddenError('You do not have permission to perform this action.'));
+        return;
+      }
+
+      next();
+    } catch (err) {
+      next(err);
+    }
+  };
+};
+

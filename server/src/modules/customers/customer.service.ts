@@ -1,5 +1,6 @@
 import { CustomerRepository } from './customer.repository.js';
 import { NotFoundError } from '../../common/errors.js';
+import { auditService } from '../audit/audit.service.js';
 import type {
   CreateCustomerInput,
   UpdateCustomerInput,
@@ -65,6 +66,22 @@ export class CustomerService {
     createdBy?: string
   ) {
     const result = await this.customerRepo.collectDue(tenantId, customerId, input, createdBy);
+
+    // Record audit log
+    await auditService.log({
+      tenantId,
+      userId: createdBy ?? null,
+      action: 'DUE_COLLECTED',
+      entityType: 'Customer',
+      entityId: customerId,
+      details: {
+        amount: input.amount,
+        method: input.method,
+        reference: input.reference ?? null,
+        newBalance: Number(result.customer.dueBalance),
+      },
+    });
+
     return {
       customer: serializeCustomer(result.customer),
       payment: {

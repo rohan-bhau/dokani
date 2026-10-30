@@ -102,6 +102,18 @@ export function Navigation() {
             {currentUser && (
               <>
                 <Link
+                  href="/dashboard"
+                  className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand ${
+                    pathname === '/dashboard'
+                      ? 'bg-slate-100 text-slate-900 font-semibold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                >
+                  <LayoutDashboard className="h-3.5 w-3.5" />
+                  <span>Dashboard</span>
+                </Link>
+
+                <Link
                   href="/products"
                   className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand ${
                     pathname.startsWith('/products')
@@ -250,6 +262,22 @@ export function Navigation() {
                 <div className="pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   Store Management
                 </div>
+
+                <Link
+                  href="/dashboard"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center justify-between rounded-md px-3 py-2.5 text-xs font-medium ${
+                    pathname === '/dashboard'
+                      ? 'bg-emerald-50 text-brand font-bold'
+                      : 'text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <LayoutDashboard className="h-4 w-4 text-emerald-600" />
+                    <span>Dashboard & Analytics</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
+                </Link>
 
                 <Link
                   href="/pos"

@@ -1,5 +1,6 @@
 import type { StockAdjustmentInput } from '@dokani/shared';
 import { NotFoundError } from '../../common/errors.js';
+import { auditService } from '../audit/audit.service.js';
 import {
   inventoryRepository,
   type InventoryRepository,
@@ -11,6 +12,22 @@ export class InventoryService {
 
   async adjustStock(tenantId: string, input: StockAdjustmentInput, userId?: string) {
     const result = await this.repo.adjustStock(tenantId, input, userId);
+
+    // Record audit log
+    await auditService.log({
+      tenantId,
+      userId: userId ?? null,
+      action: 'STOCK_ADJUSTMENT',
+      entityType: 'Product',
+      entityId: input.productId,
+      details: {
+        adjustmentType: input.type,
+        quantity: input.quantity,
+        reason: input.reason,
+        newStockLevel: result.stockLevel.quantity,
+      },
+    });
+
     return {
       stockLevel: result.stockLevel,
       movement: {

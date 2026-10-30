@@ -19,6 +19,7 @@ paymentRouter.post(
 paymentRouter.get(
   '/:id/status',
   authenticate,
+  requirePermissions(Permission.SALE_CREATE),
   paymentController.getStatus
 );
 

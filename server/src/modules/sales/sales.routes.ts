@@ -6,7 +6,7 @@ import {
   voidSaleSchema,
 } from '@dokani/shared';
 import { authenticate } from '../../middleware/authenticate.js';
-import { requirePermissions } from '../../middleware/requirePermissions.js';
+import { requirePermissions, requireAnyPermission } from '../../middleware/requirePermissions.js';
 import { validateRequest } from '../../middleware/validate.js';
 import { idempotencyMiddleware } from './idempotency.middleware.js';
 import { salesController } from './sales.controller.js';
@@ -25,14 +25,14 @@ salesRouter.post(
 
 salesRouter.get(
   '/',
-  requirePermissions(Permission.REPORT_VIEW_OWN),
+  requireAnyPermission(Permission.REPORT_VIEW_OWN, Permission.REPORT_VIEW_ALL),
   validateRequest({ query: querySaleSchema }),
   salesController.list
 );
 
 salesRouter.get(
   '/:id',
-  requirePermissions(Permission.REPORT_VIEW_OWN),
+  requireAnyPermission(Permission.REPORT_VIEW_OWN, Permission.REPORT_VIEW_ALL),
   salesController.getById
 );
 
