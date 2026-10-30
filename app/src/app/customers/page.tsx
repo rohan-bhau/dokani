@@ -19,6 +19,7 @@ import {
   useCollectDueMutation,
   type CustomerResponse,
 } from '@/store/customerApi';
+import { AuthGuard } from '@/components/auth-guard';
 
 export default function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -125,7 +126,8 @@ export default function CustomersPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+    <AuthGuard>
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
       {/* Header and Stats */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -499,6 +501,7 @@ export default function CustomersPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AuthGuard>
   );
 }

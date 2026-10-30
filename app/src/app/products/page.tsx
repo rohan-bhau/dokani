@@ -11,6 +11,7 @@ import { ProductTable } from '@/components/products/product-table';
 import { ProductModal } from '@/components/products/product-modal';
 import { StockAdjustModal } from '@/components/products/stock-adjust-modal';
 import { CsvUploadModal } from '@/components/products/csv-upload-modal';
+import { AuthGuard } from '@/components/auth-guard';
 
 export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -61,7 +62,8 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <AuthGuard>
+      <div className="mx-auto max-w-7xl w-full px-4 py-6 sm:px-6 md:px-8 space-y-6">
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
         <div>
@@ -186,6 +188,7 @@ export default function ProductsPage() {
         isOpen={isCsvModalOpen}
         onClose={() => setIsCsvModalOpen(false)}
       />
-    </div>
+      </div>
+    </AuthGuard>
   );
 }

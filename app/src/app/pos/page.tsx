@@ -17,6 +17,7 @@ import type { InvoiceResponse } from '@/store/salesApi';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { CheckoutModal } from '@/components/pos/checkout-modal';
 import { PrintableReceipt } from '@/components/pos/printable-receipt';
+import { AuthGuard } from '@/components/auth-guard';
 
 interface CartItem {
   product: ProductItem;
@@ -40,6 +41,7 @@ export default function PosPage() {
   // Held orders
   const [heldOrders, setHeldOrders] = useState<HeldOrder[]>([]);
   const [showHeldOrders, setShowHeldOrders] = useState(false);
+  const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
 
   // Modals
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -162,22 +164,37 @@ export default function PosPage() {
   }, [cart, cartDiscount]);
 
   return (
-    <div className="flex h-[calc(100vh-5rem)] flex-col gap-4 lg:flex-row">
-      {/* LEFT: Product Catalog & Search (65%) */}
+    <AuthGuard>
+      <div className="mx-auto max-w-7xl w-full px-4 py-4 sm:px-6 md:px-8 flex-1 flex flex-col">
+        <div className="flex flex-1 flex-col gap-4 lg:flex-row h-full min-h-[calc(100vh-14rem)]">
+          {/* LEFT: Product Catalog & Search (65%) */}
       <div className="flex flex-1 flex-col rounded-lg border border-border bg-surface shadow-sm overflow-hidden">
         {/* Search & Category Header */}
         <div className="p-3 border-b border-border bg-surface-subtle flex flex-col sm:flex-row gap-2 items-center justify-between">
-          <div className="relative w-full sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              ref={searchInputRef}
-              data-barcode-target="true"
-              type="search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="[F1] Scan barcode or search product..."
-              className="w-full rounded border border-border bg-surface py-2 pl-9 pr-3 text-xs text-slate-900 placeholder-slate-400 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-            />
+          <div className="flex w-full items-center gap-2 sm:max-w-md">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                ref={searchInputRef}
+                data-barcode-target="true"
+                type="search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="[F1] Scan barcode or search product..."
+                className="w-full rounded border border-border bg-surface py-2 pl-9 pr-3 text-xs text-slate-900 placeholder-slate-400 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsMobileCartOpen(!isMobileCartOpen)}
+              className="lg:hidden flex items-center gap-1.5 rounded-md bg-brand px-3 py-2 text-xs font-semibold text-white shrink-0 shadow-2xs"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              <span className="tabular-nums">
+                ({cart.reduce((sum, item) => sum + item.quantity, 0)})
+              </span>
+            </button>
           </div>
 
           <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto text-xs">
@@ -268,7 +285,13 @@ export default function PosPage() {
       </div>
 
       {/* RIGHT: Active Cart Drawer (35%) */}
-      <div className="flex w-full flex-col rounded-lg border border-border bg-surface shadow-sm lg:w-[380px] xl:w-[420px]">
+      <div
+        className={`flex w-full flex-col rounded-lg border border-border bg-surface shadow-sm lg:w-[380px] xl:w-[420px] ${
+          isMobileCartOpen
+            ? 'fixed inset-x-0 bottom-0 top-16 z-50 rounded-none border-t shadow-2xl p-2 lg:static lg:p-0 lg:rounded-lg lg:border'
+            : 'hidden lg:flex'
+        }`}
+      >
         {/* Cart Header */}
         <div className="flex items-center justify-between border-b border-border bg-surface-subtle p-3 text-xs">
           <div className="flex items-center gap-2">
@@ -280,6 +303,13 @@ export default function PosPage() {
           </div>
 
           <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setIsMobileCartOpen(false)}
+              className="lg:hidden rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700"
+            >
+              Close
+            </button>
             {heldOrders.length > 0 && (
               <button
                 type="button"
@@ -469,6 +499,8 @@ export default function PosPage() {
         invoice={completedInvoice}
         onClose={() => setCompletedInvoice(null)}
       />
-    </div>
+        </div>
+      </div>
+    </AuthGuard>
   );
 }

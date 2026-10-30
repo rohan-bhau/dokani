@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, Noto_Sans_Bengali } from 'next/font/google';
 import { Navigation } from '@/components/navigation';
+import { Footer } from '@/components/footer';
 import { Providers } from '@/components/providers';
 import './globals.css';
 
@@ -17,8 +18,8 @@ const notoSansBengali = Noto_Sans_Bengali({
 });
 
 export const metadata: Metadata = {
-  title: 'DokanPro - Retail POS & Inventory Management',
-  description: 'Digital merchant ledger, POS, and real-time inventory management for retail in Bangladesh.',
+  title: 'Dokani - Retail POS & Inventory Management System',
+  description: 'Digital merchant ledger, barcode POS billing, bKash & SSLCommerz checkout, and real-time inventory management for Bangladeshi retail stores.',
 };
 
 export default function RootLayout({
@@ -28,16 +29,18 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} ${notoSansBengali.variable}`}>
-      <body className="min-h-screen bg-canvas font-sans text-slate-900 antialiased">
+      <body className="min-h-screen bg-canvas font-sans text-slate-900 antialiased flex flex-col justify-between">
         <Providers>
           <div className="flex min-h-screen flex-col">
             <Navigation />
-            <main className="flex-1 px-4 py-6 sm:px-6 md:px-8 max-w-7xl mx-auto w-full">
+            <main className="flex-1 w-full flex flex-col">
               {children}
             </main>
+            <Footer />
           </div>
         </Providers>
       </body>
     </html>
   );
 }
+

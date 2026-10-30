@@ -4,11 +4,17 @@ export const phoneRegex = /^(?:\+8801|01)[3-9]\d{8}$/;
 
 export const signupSchema = z
   .object({
-    tenantName: z.string().trim().min(2).max(255),
-    name: z.string().trim().min(2).max(100),
-    phone: z.string().trim().regex(phoneRegex, 'Invalid Bangladeshi mobile number'),
-    email: z.string().trim().email().optional(),
-    password: z.string().min(8).max(100),
+    tenantName: z.string().trim().min(2, 'Store name must be at least 2 characters').max(255),
+    name: z.string().trim().min(2, 'Owner name must be at least 2 characters').max(100),
+    phone: z.string().trim().regex(phoneRegex, 'Enter a valid Bangladeshi mobile number (e.g. 017XXXXXXXX)'),
+    email: z
+      .string()
+      .trim()
+      .email('Please enter a valid email address')
+      .optional()
+      .or(z.literal(''))
+      .transform((val) => (val === '' ? undefined : val)),
+    password: z.string().min(8, 'Password must be at least 8 characters long').max(100),
   })
   .strict();
 
