@@ -38,6 +38,44 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     return;
   }
 
+  // Handle Prisma database errors
+  if (err && typeof err === 'object' && 'code' in err) {
+    const prismaCode = (err as { code: string }).code;
+
+    if (prismaCode === 'P2002') {
+      res.status(409).json({
+        success: false,
+        statusCode: 409,
+        code: 'CONFLICT',
+        message: 'A record with this unique identifier already exists.',
+        requestId,
+      });
+      return;
+    }
+
+    if (prismaCode === 'P2003') {
+      res.status(400).json({
+        success: false,
+        statusCode: 400,
+        code: 'BAD_REQUEST',
+        message: 'Invalid foreign key reference or the referenced record does not exist.',
+        requestId,
+      });
+      return;
+    }
+
+    if (prismaCode === 'P2025') {
+      res.status(404).json({
+        success: false,
+        statusCode: 404,
+        code: 'NOT_FOUND',
+        message: 'The requested database record was not found.',
+        requestId,
+      });
+      return;
+    }
+  }
+
   logger.error({ err, requestId, path: req.path }, 'Unhandled server exception');
 
   res.status(500).json({

@@ -8,6 +8,7 @@ import {
 import { authenticate } from '../../middleware/authenticate.js';
 import { requirePermissions } from '../../middleware/requirePermissions.js';
 import { validateRequest } from '../../middleware/validate.js';
+import { checkProductLimit } from '../../middleware/featureGuard.js';
 import { productController } from './product.controller.js';
 
 export const productRouter = Router();
@@ -17,6 +18,7 @@ productRouter.use(authenticate);
 productRouter.post(
   '/',
   requirePermissions(Permission.PRODUCT_CREATE),
+  checkProductLimit,
   validateRequest({ body: createProductSchema }),
   productController.create
 );
@@ -50,5 +52,6 @@ productRouter.delete(
 productRouter.post(
   '/import-csv',
   requirePermissions(Permission.PRODUCT_CREATE),
+  checkProductLimit,
   productController.importCsv
 );

@@ -15,7 +15,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-export function FeaturesPage() {
+function FeaturesPage() {
   const coreFeatures = [
     {
       icon: ShoppingCart,

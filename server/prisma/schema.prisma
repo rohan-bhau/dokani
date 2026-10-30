@@ -42,6 +42,7 @@ model Tenant {
   suppliers       Supplier[]
   purchases       Purchase[]
   auditLogs       AuditLog[]
+  subscriptions   Subscription[]
 
   @@map("tenants")
 }
@@ -493,6 +494,63 @@ model AuditLog {
   @@index([tenantId, entityType, entityId])
   @@map("audit_logs")
 }
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+model Plan {
+  id                  String       @id @default(uuid()) @db.Uuid
+  name                String       @db.VarChar(100)
+  code                String       @unique @db.VarChar(50)
+  description         String?      @db.Text
+  price               BigInt       @default(0)
+  billingCycle        BillingCycle @default(MONTHLY) @map("billing_cycle")
+  maxProducts         Int          @default(50) @map("max_products") // -1 for unlimited
+  maxStaff            Int          @default(1) @map("max_staff")       // -1 for unlimited
+  maxInvoicesPerMonth Int          @default(100) @map("max_invoices_per_month")
+  hasAnalytics        Boolean      @default(true) @map("has_analytics")
+  hasAuditLogs        Boolean      @default(false) @map("has_audit_logs")
+  isActive            Boolean      @default(true) @map("is_active")
+  createdAt           DateTime     @default(now()) @map("created_at")
+  updatedAt           DateTime     @updatedAt @map("updated_at")
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id                 String             @id @default(uuid()) @db.Uuid
+  tenantId           String             @map("tenant_id") @db.Uuid
+  planId             String             @map("plan_id") @db.Uuid
+  status             SubscriptionStatus @default(ACTIVE)
+  startDate          DateTime           @default(now()) @map("start_date")
+  currentPeriodStart DateTime           @default(now()) @map("current_period_start")
+  currentPeriodEnd   DateTime           @map("current_period_end")
+  cancelAtPeriodEnd  Boolean            @default(false) @map("cancel_at_period_end")
+  paymentMethod      String?            @map("payment_method") @db.VarChar(50)
+  lastPaymentId      String?            @map("last_payment_id") @db.VarChar(100)
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan   Plan   @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, status])
+  @@index([planId])
+  @@map("subscriptions")
+}
+
 
 
 

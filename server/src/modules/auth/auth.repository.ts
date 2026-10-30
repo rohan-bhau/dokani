@@ -33,23 +33,24 @@ export class AuthRepository {
           skipDuplicates: true,
         });
 
-        const allPermissions = await tx.permission.findMany({
+        const tenantPermissions = await tx.permission.findMany({
+          where: { code: { not: Permission.PLATFORM_MANAGE } },
           select: { id: true },
         });
 
         // Create owner role for this tenant
         const ownerRole = await tx.role.create({
-        data: {
-          name: SystemRole.OWNER,
-          tenantId: tenant.id,
-          isSystem: true,
-          rolePermissions: {
-            create: allPermissions.map((perm) => ({
-              permissionId: perm.id,
-            })),
+          data: {
+            name: SystemRole.OWNER,
+            tenantId: tenant.id,
+            isSystem: true,
+            rolePermissions: {
+              create: tenantPermissions.map((perm) => ({
+                permissionId: perm.id,
+              })),
+            },
           },
-        },
-      });
+        });
 
       // Create owner user
       const user = await tx.user.create({

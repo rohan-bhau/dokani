@@ -1,0 +1,7 @@
+# Allow crawling of public marketing and landing routes
+User-agent: *
+Allow: /
+Disallow: /pos
+Disallow: /dashboard
+Disallow: /products
+Disallow: /customers
