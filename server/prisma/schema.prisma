@@ -29,13 +29,17 @@ model Tenant {
 
   users          User[]
   roles          Role[]
-  categories     Category[]
-  products       Product[]
-  stockMovements StockMovement[]
-  stockLevels    StockLevel[]
-  invoices       Invoice[]
-  payments       Payment[]
-  counters       TenantCounter[]
+  categories      Category[]
+  products        Product[]
+  stockMovements  StockMovement[]
+  stockLevels     StockLevel[]
+  invoices        Invoice[]
+  payments        Payment[]
+  counters        TenantCounter[]
+  customers       Customer[]
+  customerLedgers CustomerLedger[]
+  suppliers       Supplier[]
+  purchases       Purchase[]
 
   @@map("tenants")
 }
@@ -52,11 +56,13 @@ model User {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  tenant                Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  userRoles             UserRole[]
-  refreshTokens         RefreshToken[]
-  stockMovementsCreated StockMovement[]
-  invoicesCreated       Invoice[]
+  tenant                 Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userRoles              UserRole[]
+  refreshTokens          RefreshToken[]
+  stockMovementsCreated  StockMovement[]
+  invoicesCreated        Invoice[]
+  customerLedgersCreated CustomerLedger[]
+  purchasesCreated       Purchase[]
 
   @@unique([tenantId, phone])
   @@unique([tenantId, email])
@@ -179,6 +185,7 @@ model Product {
   stockMovements StockMovement[]
   stockLevel     StockLevel?
   invoiceItems   InvoiceItem[]
+  purchaseItems  PurchaseItem[]
 
   @@unique([tenantId, sku])
   @@unique([tenantId, barcode])
@@ -267,6 +274,7 @@ model Invoice {
   updatedAt      DateTime      @updatedAt @map("updated_at")
 
   tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
   user     User?         @relation(fields: [createdBy], references: [id], onDelete: SetNull)
   items    InvoiceItem[]
   payments Payment[]
@@ -306,11 +314,127 @@ model Payment {
   reference  String?       @db.VarChar(100)
   createdAt  DateTime      @default(now()) @map("created_at")
 
-  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  invoice Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice  Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, invoiceId])
   @@map("payments")
 }
+
+enum CustomerLedgerType {
+  SALE_DUE
+  PAYMENT_RECEIVED
+  RETURN_CREDIT
+  OPENING_BALANCE
+}
+
+model Customer {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  name       String   @db.VarChar(150)
+  phone      String   @db.VarChar(20)
+  email      String?  @db.VarChar(255)
+  address    String?  @db.Text
+  dueBalance BigInt   @default(0) @map("due_balance")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+  ledger   CustomerLedger[]
+  payments Payment[]
+
+  @@unique([tenantId, phone])
+  @@index([tenantId, name])
+  @@map("customers")
+}
+
+model CustomerLedger {
+  id           String             @id @default(uuid()) @db.Uuid
+  tenantId     String             @map("tenant_id") @db.Uuid
+  customerId   String             @map("customer_id") @db.Uuid
+  type         CustomerLedgerType
+  amount       BigInt
+  balanceAfter BigInt             @map("balance_after")
+  referenceId  String?            @map("reference_id") @db.Uuid
+  notes        String?            @db.Text
+  createdBy    String?            @map("created_by") @db.Uuid
+  createdAt    DateTime           @default(now()) @map("created_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, customerId])
+  @@index([tenantId, createdAt])
+  @@map("customer_ledger")
+}
+
+model Supplier {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String   @db.VarChar(150)
+  company   String?  @db.VarChar(150)
+  phone     String   @db.VarChar(20)
+  email     String?  @db.VarChar(255)
+  address   String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  purchases Purchase[]
+
+  @@unique([tenantId, phone])
+  @@map("suppliers")
+}
+
+enum PurchaseStatus {
+  PENDING
+  RECEIVED
+  CANCELLED
+}
+
+model Purchase {
+  id             String         @id @default(uuid()) @db.Uuid
+  tenantId       String         @map("tenant_id") @db.Uuid
+  supplierId     String         @map("supplier_id") @db.Uuid
+  purchaseNumber String         @map("purchase_number") @db.VarChar(50)
+  status         PurchaseStatus @default(RECEIVED)
+  subtotal       BigInt         @default(0)
+  total          BigInt         @default(0)
+  paidAmount     BigInt         @default(0) @map("paid_amount")
+  dueAmount      BigInt         @default(0) @map("due_amount")
+  notes          String?        @db.Text
+  createdBy      String?        @map("created_by") @db.Uuid
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplier Supplier       @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  user     User?          @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  items    PurchaseItem[]
+
+  @@unique([tenantId, purchaseNumber])
+  @@index([tenantId, createdAt])
+  @@map("purchases")
+}
+
+model PurchaseItem {
+  id         String   @id @default(uuid()) @db.Uuid
+  purchaseId String   @map("purchase_id") @db.Uuid
+  productId  String   @map("product_id") @db.Uuid
+  quantity   Int
+  unitCost   BigInt   @map("unit_cost")
+  lineTotal  BigInt   @map("line_total")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([purchaseId])
+  @@map("purchase_items")
+}
+
 
 

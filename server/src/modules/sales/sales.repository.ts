@@ -186,6 +186,29 @@ export class SalesRepository {
           });
         }
 
+        // If there is any unpaid due balance and customer is attached, record in customer credit ledger
+        if (dueTotal > 0n && input.customerId) {
+          const updatedCustomer = await tx.customer.update({
+            where: { id: input.customerId },
+            data: {
+              dueBalance: { increment: dueTotal },
+            },
+          });
+
+          await tx.customerLedger.create({
+            data: {
+              tenantId,
+              customerId: input.customerId,
+              type: 'SALE_DUE',
+              amount: dueTotal,
+              balanceAfter: updatedCustomer.dueBalance,
+              referenceId: invoice.id,
+              notes: `Credit sale invoice #${invoice.invoiceNumber}`,
+              createdBy: userId ?? null,
+            },
+          });
+        }
+
         return invoice;
       },
       {

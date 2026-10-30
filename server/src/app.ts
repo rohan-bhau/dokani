@@ -12,6 +12,8 @@ import { authRouter } from './modules/auth/auth.routes.js';
 import { productRouter } from './modules/products/product.routes.js';
 import { inventoryRouter } from './modules/inventory/inventory.routes.js';
 import { salesRouter } from './modules/sales/sales.routes.js';
+import { customerRouter } from './modules/customers/customer.routes.js';
+import { purchaseRouter } from './modules/purchases/purchase.routes.js';
 
 (BigInt.prototype as unknown as { toJSON: () => number }).toJSON = function () {
   return Number(this);
@@ -62,6 +64,8 @@ export const createApp = (): Express => {
   app.use('/api/v1/products', productRouter);
   app.use('/api/v1/inventory', inventoryRouter);
   app.use('/api/v1/sales', salesRouter);
+  app.use('/api/v1/customers', customerRouter);
+  app.use('/api/v1/purchases', purchaseRouter);
 
   app.use((_req, _res, next) => {
     next(new NotFoundError('Requested endpoint does not exist.'));

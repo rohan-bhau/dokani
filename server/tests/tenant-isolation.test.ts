@@ -7,9 +7,14 @@ describe('Multi-Tenant Isolation & Authentication Tests', () => {
   const app = createApp();
 
   beforeAll(async () => {
+    await prisma.purchaseItem.deleteMany();
+    await prisma.purchase.deleteMany();
+    await prisma.supplier.deleteMany();
+    await prisma.customerLedger.deleteMany();
     await prisma.payment.deleteMany();
     await prisma.invoiceItem.deleteMany();
     await prisma.invoice.deleteMany();
+    await prisma.customer.deleteMany();
     await prisma.tenantCounter.deleteMany();
     await prisma.stockMovement.deleteMany();
     await prisma.stockLevel.deleteMany();
