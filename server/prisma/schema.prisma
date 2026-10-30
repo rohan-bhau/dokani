@@ -33,6 +33,9 @@ model Tenant {
   products       Product[]
   stockMovements StockMovement[]
   stockLevels    StockLevel[]
+  invoices       Invoice[]
+  payments       Payment[]
+  counters       TenantCounter[]
 
   @@map("tenants")
 }
@@ -53,6 +56,7 @@ model User {
   userRoles             UserRole[]
   refreshTokens         RefreshToken[]
   stockMovementsCreated StockMovement[]
+  invoicesCreated       Invoice[]
 
   @@unique([tenantId, phone])
   @@unique([tenantId, email])
@@ -174,6 +178,7 @@ model Product {
   category       Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   stockMovements StockMovement[]
   stockLevel     StockLevel?
+  invoiceItems   InvoiceItem[]
 
   @@unique([tenantId, sku])
   @@unique([tenantId, barcode])
@@ -215,4 +220,97 @@ model StockLevel {
   @@id([tenantId, productId])
   @@map("stock_levels")
 }
+
+model TenantCounter {
+  tenantId    String   @map("tenant_id") @db.Uuid
+  counterType String   @map("counter_type") @db.VarChar(50)
+  lastValue   BigInt   @default(0) @map("last_value")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, counterType])
+  @@map("tenant_counters")
+}
+
+enum InvoiceStatus {
+  COMPLETED
+  VOIDED
+  PARTIAL_RETURN
+  FULL_RETURN
+}
+
+enum PaymentMethod {
+  CASH
+  BKASH
+  NAGAD
+  CARD
+  CREDIT_BAKI
+}
+
+model Invoice {
+  id             String        @id @default(uuid()) @db.Uuid
+  tenantId       String        @map("tenant_id") @db.Uuid
+  invoiceNumber  String        @map("invoice_number") @db.VarChar(50)
+  customerId     String?       @map("customer_id") @db.Uuid
+  status         InvoiceStatus @default(COMPLETED)
+  subtotal       BigInt        @default(0)
+  discount       BigInt        @default(0)
+  vatTotal       BigInt        @default(0) @map("vat_total")
+  total          BigInt        @default(0)
+  paidTotal      BigInt        @default(0) @map("paid_total")
+  dueTotal       BigInt        @default(0) @map("due_total")
+  idempotencyKey String?       @map("idempotency_key") @db.VarChar(100)
+  notes          String?       @db.Text
+  createdBy      String?       @map("created_by") @db.Uuid
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user     User?         @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  items    InvoiceItem[]
+  payments Payment[]
+
+  @@unique([tenantId, invoiceNumber])
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, createdAt])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  invoiceId String   @map("invoice_id") @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  quantity  Int
+  unitPrice BigInt   @map("unit_price")
+  unitCost  BigInt   @map("unit_cost")
+  discount  BigInt   @default(0)
+  vatRate   Int      @default(0) @map("vat_rate")
+  lineTotal BigInt   @map("line_total")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+model Payment {
+  id         String        @id @default(uuid()) @db.Uuid
+  tenantId   String        @map("tenant_id") @db.Uuid
+  invoiceId  String?       @map("invoice_id") @db.Uuid
+  customerId String?       @map("customer_id") @db.Uuid
+  method     PaymentMethod @default(CASH)
+  amount     BigInt
+  reference  String?       @db.VarChar(100)
+  createdAt  DateTime      @default(now()) @map("created_at")
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, invoiceId])
+  @@map("payments")
+}
+
 

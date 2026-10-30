@@ -25,7 +25,16 @@ export class InventoryService {
     if (!stock) {
       throw new NotFoundError('Stock information not found for this product.');
     }
-    return stock;
+    return {
+      ...stock,
+      product: stock.product
+        ? {
+            ...stock.product,
+            costPrice: Number(stock.product.costPrice),
+            sellPrice: Number(stock.product.sellPrice),
+          }
+        : undefined,
+    };
   }
 
   async listStockMovements(tenantId: string, productId: string, limit?: number) {

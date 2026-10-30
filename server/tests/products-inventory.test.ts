@@ -12,6 +12,10 @@ describe("Product Catalog & Inventory Tests", ()=> {
     let productIdA: string;
 
     beforeAll(async()=> {
+        await prisma.payment.deleteMany();
+        await prisma.invoiceItem.deleteMany();
+        await prisma.invoice.deleteMany();
+        await prisma.tenantCounter.deleteMany();
         await prisma.stockMovement.deleteMany();
         await prisma.stockLevel.deleteMany();
         await prisma.product.deleteMany();
