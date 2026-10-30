@@ -1,5 +1,5 @@
 import { Permission, SystemRole } from '@dokani/shared';
-import type { Tenant, User } from '@prisma/client';
+import type { Tenant, User } from '../../config/prisma.js';
 import { prisma } from '../../config/prisma.js';
 
 export interface CreateTenantOwnerParams {

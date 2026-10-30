@@ -12,6 +12,7 @@ describe("Product Catalog & Inventory Tests", ()=> {
     let productIdA: string;
 
     beforeAll(async()=> {
+        await prisma.webhookEvent.deleteMany();
         await prisma.purchaseItem.deleteMany();
         await prisma.purchase.deleteMany();
         await prisma.supplier.deleteMany();

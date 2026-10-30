@@ -217,8 +217,18 @@ export class AuthService {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private extractRolesAndPermissions(user: any) {
+  private extractRolesAndPermissions(user: {
+    userRoles: Array<{
+      role: {
+        name: string;
+        rolePermissions: Array<{
+          permission: {
+            code: string;
+          };
+        }>;
+      };
+    }>;
+  }) {
     const roles: string[] = [];
     const permissionsSet = new Set<string>();
 

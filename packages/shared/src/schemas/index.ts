@@ -5,3 +5,4 @@ export * from './sale.js';
 export * from './customer.js';
 export * from './supplier.js';
 export * from './purchase.js';
+export * from './payment.js';

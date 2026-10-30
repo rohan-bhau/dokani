@@ -36,8 +36,26 @@ export class SalesService {
     return this.serializeInvoice(invoice);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private serializeInvoice(invoice: any) {
+  private serializeInvoice(invoice: {
+    subtotal: bigint;
+    discount: bigint;
+    vatTotal: bigint;
+    total: bigint;
+    paidTotal: bigint;
+    dueTotal: bigint;
+    items?: Array<{
+      unitPrice: bigint;
+      unitCost: bigint;
+      discount: bigint;
+      lineTotal: bigint;
+      [key: string]: unknown;
+    }>;
+    payments?: Array<{
+      amount: bigint;
+      [key: string]: unknown;
+    }>;
+    [key: string]: unknown;
+  }) {
     return {
       ...invoice,
       subtotal: Number(invoice.subtotal),
@@ -46,14 +64,14 @@ export class SalesService {
       total: Number(invoice.total),
       paidTotal: Number(invoice.paidTotal),
       dueTotal: Number(invoice.dueTotal),
-      items: invoice.items?.map((item: any) => ({
+      items: invoice.items?.map((item) => ({
         ...item,
         unitPrice: Number(item.unitPrice),
         unitCost: Number(item.unitCost),
         discount: Number(item.discount),
         lineTotal: Number(item.lineTotal),
       })),
-      payments: invoice.payments?.map((payment: any) => ({
+      payments: invoice.payments?.map((payment) => ({
         ...payment,
         amount: Number(payment.amount),
       })),

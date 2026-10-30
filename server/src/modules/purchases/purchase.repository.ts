@@ -5,7 +5,7 @@ import type {
   CreatePurchaseInput,
   QueryPurchaseInput,
 } from '@dokani/shared';
-import { prisma } from '../../config/prisma.js';
+import { prisma, Prisma } from '../../config/prisma.js';
 import { NotFoundError, BadRequestError } from '../../common/errors.js';
 
 export class PurchaseRepository {
@@ -28,7 +28,7 @@ export class PurchaseRepository {
     const limit = query.limit ?? 20;
     const skip = (page - 1) * limit;
 
-    const where: any = { tenantId };
+    const where: Prisma.SupplierWhereInput = { tenantId };
     if (query.q) {
       where.OR = [
         { name: { contains: query.q, mode: 'insensitive' } },
@@ -251,7 +251,7 @@ export class PurchaseRepository {
     const limit = query.limit ?? 20;
     const skip = (page - 1) * limit;
 
-    const where: any = { tenantId };
+    const where: Prisma.PurchaseWhereInput = { tenantId };
     if (query.supplierId) {
       where.supplierId = query.supplierId;
     }

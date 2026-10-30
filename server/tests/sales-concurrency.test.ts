@@ -13,6 +13,7 @@ describe('Transactional Sales, Invoicing & Concurrency Tests', () => {
 
     beforeAll(async () => {
         // Clean up sales and product tables before test
+        await prisma.webhookEvent.deleteMany();
         await prisma.purchaseItem.deleteMany();
         await prisma.purchase.deleteMany();
         await prisma.supplier.deleteMany();
@@ -25,6 +26,7 @@ describe('Transactional Sales, Invoicing & Concurrency Tests', () => {
         await prisma.stockMovement.deleteMany();
         await prisma.stockLevel.deleteMany();
         await prisma.product.deleteMany();
+        await prisma.category.deleteMany();
         await prisma.refreshToken.deleteMany();
         await prisma.userRole.deleteMany();
         await prisma.rolePermission.deleteMany();

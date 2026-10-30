@@ -7,6 +7,7 @@ describe('Multi-Tenant Isolation & Authentication Tests', () => {
   const app = createApp();
 
   beforeAll(async () => {
+    await prisma.webhookEvent.deleteMany();
     await prisma.purchaseItem.deleteMany();
     await prisma.purchase.deleteMany();
     await prisma.supplier.deleteMany();

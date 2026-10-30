@@ -1,6 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../generated/client/index.js';
 import { env } from './env.js';
 import { logger } from './logger.js';
+
+export * from '../generated/client/index.js';
 
 const prismaClientSingleton = (): PrismaClient => {
   const client = new PrismaClient({

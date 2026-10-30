@@ -8,7 +8,15 @@ import type {
   QueryPurchaseInput,
 } from '@dokani/shared';
 
-function serializePurchase(purchase: any) {
+function serializePurchase<
+  T extends {
+    subtotal: bigint;
+    total: bigint;
+    paidAmount: bigint;
+    dueAmount: bigint;
+    items?: Array<{ unitCost: bigint; lineTotal: bigint; [key: string]: unknown }>;
+  },
+>(purchase: T | null) {
   if (!purchase) return null;
   return {
     ...purchase,
@@ -16,7 +24,7 @@ function serializePurchase(purchase: any) {
     total: Number(purchase.total),
     paidAmount: Number(purchase.paidAmount),
     dueAmount: Number(purchase.dueAmount),
-    items: purchase.items?.map((item: any) => ({
+    items: purchase.items?.map((item) => ({
       ...item,
       unitCost: Number(item.unitCost),
       lineTotal: Number(item.lineTotal),

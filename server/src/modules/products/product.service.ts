@@ -122,8 +122,14 @@ export class ProductService {
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private serializeProduct(product: any) {
+  private serializeProduct<
+    T extends {
+      costPrice: bigint;
+      sellPrice: bigint;
+      stockLevel?: { quantity: number } | null;
+      [key: string]: unknown;
+    },
+  >(product: T) {
     return {
       ...product,
       costPrice: Number(product.costPrice),

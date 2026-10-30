@@ -1,4 +1,4 @@
-import { prisma } from '../../config/prisma.js';
+import { prisma, Prisma } from '../../config/prisma.js';
 import { NotFoundError } from '../../common/errors.js';
 import type {
   CreateCustomerInput,
@@ -46,7 +46,7 @@ export class CustomerRepository {
     const limit = query.limit ?? 20;
     const skip = (page - 1) * limit;
 
-    const where: any = { tenantId };
+    const where: Prisma.CustomerWhereInput = { tenantId };
 
     if (query.q) {
       where.OR = [

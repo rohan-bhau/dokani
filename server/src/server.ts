@@ -1,10 +1,14 @@
+import { createServer } from 'http';
 import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
+import { initSocketServer } from './config/socket.js';
 
 const app = createApp();
+const httpServer = createServer(app);
+initSocketServer(httpServer);
 
-const server = app.listen(env.PORT, () => {
+const server = httpServer.listen(env.PORT, () => {
   logger.info(`Dokani API listening on port ${env.PORT} in ${env.NODE_ENV} mode`);
 });
 

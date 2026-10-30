@@ -7,7 +7,7 @@ import type {
   CollectDueInput,
 } from '@dokani/shared';
 
-function serializeCustomer(customer: any) {
+function serializeCustomer<T extends { dueBalance: bigint }>(customer: T | null) {
   if (!customer) return null;
   return {
     ...customer,
@@ -15,7 +15,7 @@ function serializeCustomer(customer: any) {
   };
 }
 
-function serializeLedger(item: any) {
+function serializeLedger<T extends { amount: bigint; balanceAfter: bigint }>(item: T | null) {
   if (!item) return null;
   return {
     ...item,

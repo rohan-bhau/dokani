@@ -11,6 +11,15 @@ const envSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
   CORS_ORIGIN: z.string().min(1),
+  BKASH_APP_KEY: z.string().optional(),
+  BKASH_APP_SECRET: z.string().optional(),
+  BKASH_USERNAME: z.string().optional(),
+  BKASH_PASSWORD: z.string().optional(),
+  BKASH_BASE_URL: z.string().url().optional(),
+  SSLCOMMERZ_STORE_ID: z.string().optional(),
+  SSLCOMMERZ_STORE_PASS: z.string().optional(),
+  SSLCOMMERZ_IS_SANDBOX: z.string().default('true'),
+  SSLCOMMERZ_BASE_URL: z.string().url().optional(),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
