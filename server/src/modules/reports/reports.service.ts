@@ -332,6 +332,199 @@ export class ReportsService {
       customers: allCustomers,
     };
   }
+
+  async getSalesDetailed(filter: ReportDateFilter & { groupBy?: 'day' | 'week' | 'month' }) {
+    const invoiceWhere: { tenantId: string; status: 'COMPLETED'; createdAt?: { gte?: Date; lte?: Date } } = {
+      tenantId: filter.tenantId,
+      status: 'COMPLETED',
+    };
+
+    if (filter.startDate || filter.endDate) {
+      invoiceWhere.createdAt = {};
+      if (filter.startDate) invoiceWhere.createdAt.gte = filter.startDate;
+      if (filter.endDate) invoiceWhere.createdAt.lte = filter.endDate;
+    }
+
+    const invoices = await prisma.invoice.findMany({
+      where: invoiceWhere,
+      include: {
+        payments: true,
+        items: true,
+        user: { select: { id: true, name: true, phone: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const cashierMap = new Map<string, { cashierId: string; name: string; invoiceCount: number; totalRevenue: number }>();
+    const tenderTotals: Record<string, number> = { CASH: 0, BKASH: 0, NAGAD: 0, CARD: 0, CREDIT_BAKI: 0, OTHER: 0 };
+    const timelineMap = new Map<string, { date: string; sales: number; count: number }>();
+
+    for (const inv of invoices) {
+      const cashierName = inv.user?.name ?? 'Unknown';
+      const cashierId = inv.user?.id ?? 'system';
+      const c = cashierMap.get(cashierId) ?? { cashierId, name: cashierName, invoiceCount: 0, totalRevenue: 0 };
+      c.invoiceCount++;
+      c.totalRevenue += Number(inv.total);
+      cashierMap.set(cashierId, c);
+
+
+      for (const p of inv.payments) {
+        const m = p.method in tenderTotals ? p.method : 'OTHER';
+        tenderTotals[m] = (tenderTotals[m] ?? 0) + Number(p.amount);
+      }
+
+      const dateStr = inv.createdAt.toISOString().slice(0, 10);
+      const t = timelineMap.get(dateStr) ?? { date: dateStr, sales: 0, count: 0 };
+      t.sales += Number(inv.total);
+      t.count++;
+      timelineMap.set(dateStr, t);
+    }
+
+    return {
+      totalInvoices: invoices.length,
+      totalRevenue: invoices.reduce((sum, inv) => sum + Number(inv.total), 0),
+      timeline: Array.from(timelineMap.values()).sort((a, b) => a.date.localeCompare(b.date)),
+      byCashier: Array.from(cashierMap.values()),
+      byPaymentMethod: tenderTotals,
+    };
+  }
+
+  async getProfitLoss(filter: ReportDateFilter) {
+    const summary = await this.getExecutiveSummary(filter);
+
+    const expenseWhere: { tenantId: string; spentOn?: { gte?: Date; lte?: Date } } = {
+      tenantId: filter.tenantId,
+    };
+
+    if (filter.startDate || filter.endDate) {
+      expenseWhere.spentOn = {};
+      if (filter.startDate) expenseWhere.spentOn.gte = filter.startDate;
+      if (filter.endDate) expenseWhere.spentOn.lte = filter.endDate;
+    }
+
+    const expenses = await prisma.expense.findMany({
+      where: expenseWhere,
+      select: { category: true, amount: true },
+    });
+
+    const categoryBreakdown: Record<string, number> = {};
+    for (const exp of expenses) {
+      categoryBreakdown[exp.category] = (categoryBreakdown[exp.category] ?? 0) + Number(exp.amount);
+    }
+
+    const revenue = summary.sales.totalRevenue;
+    const cogs = summary.sales.cogs;
+    const grossProfit = summary.sales.grossProfit;
+    const totalExpenses = summary.sales.totalExpenses;
+    const netProfit = summary.sales.netProfit;
+
+    return {
+      revenue,
+      cogs,
+      grossProfit,
+      grossMarginPercentage: revenue > 0 ? Number(((grossProfit / revenue) * 100).toFixed(2)) : 0,
+      totalExpenses,
+      netProfit,
+      netMarginPercentage: revenue > 0 ? Number(((netProfit / revenue) * 100).toFixed(2)) : 0,
+      expensesByCategory: categoryBreakdown,
+    };
+  }
+
+  async getStockValuation(tenantId: string) {
+    const products = await prisma.product.findMany({
+      where: { tenantId, isActive: true },
+      include: {
+        stockLevel: true,
+        category: { select: { id: true, name: true } },
+      },
+    });
+
+    let totalUnits = 0;
+    let totalCostValuation = 0;
+    let totalRetailValuation = 0;
+
+    const categoryMap = new Map<string, { categoryId: string; categoryName: string; productCount: number; units: number; costValuation: number; retailValuation: number }>();
+
+    for (const prod of products) {
+      const units = prod.stockLevel?.quantity ?? 0;
+      const cost = Number(prod.costPrice) * units;
+      const retail = Number(prod.sellPrice) * units;
+
+      totalUnits += units;
+      totalCostValuation += cost;
+      totalRetailValuation += retail;
+
+      const catName = prod.category?.name ?? 'Uncategorized';
+      const catId = prod.category?.id ?? 'uncategorized';
+      const cat = categoryMap.get(catId) ?? {
+        categoryId: catId,
+        categoryName: catName,
+        productCount: 0,
+        units: 0,
+        costValuation: 0,
+        retailValuation: 0,
+      };
+
+      cat.productCount++;
+      cat.units += units;
+      cat.costValuation += cost;
+      cat.retailValuation += retail;
+      categoryMap.set(catId, cat);
+    }
+
+    return {
+      totalProducts: products.length,
+      totalUnits,
+      costValuation: totalCostValuation,
+      retailValuation: totalRetailValuation,
+      potentialGrossProfit: totalRetailValuation - totalCostValuation,
+      categories: Array.from(categoryMap.values()),
+    };
+  }
+
+  async getVatSummary(filter: ReportDateFilter) {
+    const invoiceWhere: { tenantId: string; status: 'COMPLETED'; createdAt?: { gte?: Date; lte?: Date } } = {
+      tenantId: filter.tenantId,
+      status: 'COMPLETED',
+    };
+
+    if (filter.startDate || filter.endDate) {
+      invoiceWhere.createdAt = {};
+      if (filter.startDate) invoiceWhere.createdAt.gte = filter.startDate;
+      if (filter.endDate) invoiceWhere.createdAt.lte = filter.endDate;
+    }
+
+    const invoices = await prisma.invoice.findMany({
+      where: invoiceWhere,
+      select: {
+        subtotal: true,
+        vatTotal: true,
+        total: true,
+      },
+    });
+
+    let totalSales = 0;
+    let totalVat = 0;
+    let taxableSales = 0;
+
+    for (const inv of invoices) {
+      totalSales += Number(inv.total);
+      const vat = Number(inv.vatTotal);
+      totalVat += vat;
+      if (vat > 0) {
+        taxableSales += Number(inv.subtotal);
+      }
+    }
+
+    return {
+      totalSales,
+      taxableSales,
+      collectedVat: totalVat,
+      effectiveVatRate: taxableSales > 0 ? Number(((totalVat / taxableSales) * 100).toFixed(2)) : 0,
+      netVatPayable: totalVat,
+    };
+  }
 }
 
 export const reportsService = new ReportsService();
+

@@ -36,3 +36,39 @@ export const refreshTokenSchema = z
   .strict();
 
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
+
+export const requestOtpSchema = z
+  .object({
+    phone: z.string().trim().regex(phoneRegex, 'Invalid Bangladeshi mobile number'),
+  })
+  .strict();
+
+export type RequestOtpInput = z.infer<typeof requestOtpSchema>;
+
+export const verifyOtpSchema = z
+  .object({
+    phone: z.string().trim().regex(phoneRegex, 'Invalid Bangladeshi mobile number'),
+    code: z.string().trim().length(6, 'OTP must be 6 digits'),
+  })
+  .strict();
+
+export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;
+
+export const forgotPasswordSchema = z
+  .object({
+    phone: z.string().trim().regex(phoneRegex, 'Invalid Bangladeshi mobile number'),
+  })
+  .strict();
+
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+
+export const resetPasswordSchema = z
+  .object({
+    phone: z.string().trim().regex(phoneRegex, 'Invalid Bangladeshi mobile number'),
+    code: z.string().trim().length(6, 'OTP must be 6 digits'),
+    newPassword: z.string().min(8, 'Password must be at least 8 characters long').max(100),
+  })
+  .strict();
+
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+

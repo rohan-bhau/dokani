@@ -73,6 +73,118 @@ export class AuthController {
       next(err);
     }
   };
+
+  getProfile = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { userId } = (await import('../../common/context.js')).getRequestContext();
+      const profile = await this.service.getProfile(userId);
+
+      res.status(200).json({
+        success: true,
+        statusCode: 200,
+        message: 'Profile retrieved successfully.',
+        data: profile,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  updateProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { userId } = (await import('../../common/context.js')).getRequestContext();
+      const profile = await this.service.updateProfile(userId, req.body);
+
+      res.status(200).json({
+        success: true,
+        statusCode: 200,
+        message: 'Profile updated successfully.',
+        data: profile,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  setApprovalPin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { userId } = (await import('../../common/context.js')).getRequestContext();
+      const result = await this.service.setApprovalPin(userId, req.body.pin);
+
+      res.status(200).json({
+        success: true,
+        statusCode: 200,
+        message: result.message,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  verifyApprovalPin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { tenantId } = (await import('../../common/context.js')).getRequestContext();
+      const result = await this.service.verifyApprovalPin(tenantId, req.body.pin);
+
+      res.status(200).json({
+        success: true,
+        statusCode: 200,
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  requestOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await this.service.requestOtp(req.body.phone);
+      res.status(200).json({
+        statusCode: 200,
+        ...result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  verifyOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await this.service.verifyOtp(req.body.phone, req.body.code);
+      res.status(200).json({
+        statusCode: 200,
+        ...result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  forgotPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await this.service.forgotPassword(req.body.phone);
+      res.status(200).json({
+        statusCode: 200,
+        ...result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  resetPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await this.service.resetPassword(req.body.phone, req.body.code, req.body.newPassword);
+      res.status(200).json({
+        statusCode: 200,
+        ...result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
 }
 
 export const authController = new AuthController();
+

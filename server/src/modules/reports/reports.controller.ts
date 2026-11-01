@@ -64,6 +64,91 @@ export class ReportsController {
       next(err);
     }
   };
+
+  getSalesDetailed = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { tenantId } = getRequestContext();
+      const { startDate, endDate, groupBy } = req.query;
+
+      const report = await reportsService.getSalesDetailed({
+        tenantId,
+        ...(groupBy === 'day' || groupBy === 'week' || groupBy === 'month' ? { groupBy } : {}),
+        ...(typeof startDate === 'string' && startDate ? { startDate: new Date(startDate) } : {}),
+        ...(typeof endDate === 'string' && endDate ? { endDate: new Date(endDate) } : {}),
+      });
+
+
+      res.status(200).json({
+        success: true,
+        statusCode: 200,
+        message: 'Detailed sales report fetched successfully.',
+        data: report,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getProfitLoss = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { tenantId } = getRequestContext();
+      const { startDate, endDate } = req.query;
+
+      const report = await reportsService.getProfitLoss({
+        tenantId,
+        ...(typeof startDate === 'string' && startDate ? { startDate: new Date(startDate) } : {}),
+        ...(typeof endDate === 'string' && endDate ? { endDate: new Date(endDate) } : {}),
+      });
+
+      res.status(200).json({
+        success: true,
+        statusCode: 200,
+        message: 'Profit & Loss report fetched successfully.',
+        data: report,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getStockValuation = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { tenantId } = getRequestContext();
+      const report = await reportsService.getStockValuation(tenantId);
+
+      res.status(200).json({
+        success: true,
+        statusCode: 200,
+        message: 'Stock valuation report fetched successfully.',
+        data: report,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getVatSummary = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { tenantId } = getRequestContext();
+      const { startDate, endDate } = req.query;
+
+      const report = await reportsService.getVatSummary({
+        tenantId,
+        ...(typeof startDate === 'string' && startDate ? { startDate: new Date(startDate) } : {}),
+        ...(typeof endDate === 'string' && endDate ? { endDate: new Date(endDate) } : {}),
+      });
+
+      res.status(200).json({
+        success: true,
+        statusCode: 200,
+        message: 'VAT summary report fetched successfully.',
+        data: report,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
 }
 
 export const reportsController = new ReportsController();
+

@@ -215,4 +215,168 @@ export class PaymentService {
       updatedAt: payment.updatedAt,
     };
   }
+
+  async getPublicInvoiceByToken(token: string) {
+    const invoice = await prisma.invoice.findFirst({
+      where: { paymentToken: token },
+      include: {
+        tenant: {
+          select: {
+            id: true,
+            name: true,
+            logoUrl: true,
+            phone: true,
+            address: true,
+            receiptFooter: true,
+          },
+        },
+        items: {
+          include: {
+            product: { select: { name: true, sku: true, unit: true } },
+          },
+        },
+      },
+    });
+
+    if (!invoice) {
+      throw new NotFoundError('Invoice not found or payment link expired.');
+    }
+
+    return {
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      paymentToken: invoice.paymentToken,
+      status: invoice.status,
+      subtotal: Number(invoice.subtotal),
+      discount: Number(invoice.discount),
+      vatTotal: Number(invoice.vatTotal),
+      total: Number(invoice.total),
+      paidTotal: Number(invoice.paidTotal),
+      dueTotal: Number(invoice.dueTotal),
+      createdAt: invoice.createdAt,
+      shop: {
+        id: invoice.tenant.id,
+        name: invoice.tenant.name,
+        logoUrl: invoice.tenant.logoUrl,
+        phone: invoice.tenant.phone,
+        address: invoice.tenant.address,
+      },
+      tenant: {
+        id: invoice.tenant.id,
+        name: invoice.tenant.name,
+        logoUrl: invoice.tenant.logoUrl,
+        phone: invoice.tenant.phone,
+        address: invoice.tenant.address,
+        receiptFooter: invoice.tenant.receiptFooter,
+      },
+      items: invoice.items.map((i) => ({
+        id: i.id,
+        name: i.product.name,
+        productName: i.product.name,
+        sku: i.product.sku,
+        unit: i.product.unit,
+        quantity: i.quantity,
+        unitPrice: Number(i.unitPrice),
+        lineTotal: Number(i.lineTotal),
+      })),
+    };
+  }
+
+  async completeSimulatedPublicPayment(
+    token: string,
+    provider: 'BKASH' | 'SSLCOMMERZ',
+    transactionId?: string
+  ) {
+    const invoice = await prisma.invoice.findFirst({
+      where: { paymentToken: token },
+      include: { customer: true },
+    });
+
+    if (!invoice) {
+      throw new NotFoundError('Invoice not found.');
+    }
+
+    if (invoice.status === 'COMPLETED' && invoice.dueTotal === 0n) {
+      return {
+        success: true,
+        message: 'Invoice already fully paid.',
+        invoiceNumber: invoice.invoiceNumber,
+        transactionId: transactionId || `TRX-${Date.now()}`,
+        amount: Number(invoice.total),
+      };
+    }
+
+
+    const payAmount = invoice.dueTotal > 0n ? invoice.dueTotal : invoice.total;
+    const trxId = transactionId || `${provider.toLowerCase()}_${Date.now()}`;
+
+    // Record payment
+    const payment = await prisma.payment.create({
+      data: {
+        tenantId: invoice.tenantId,
+        invoiceId: invoice.id,
+        customerId: invoice.customerId,
+        method: provider === 'BKASH' ? 'BKASH' : 'CARD',
+        status: 'SUCCESS',
+        provider,
+        providerRef: trxId,
+        amount: payAmount,
+        reference: trxId,
+      },
+    });
+
+    // Update invoice
+    await prisma.invoice.update({
+      where: { id: invoice.id },
+      data: {
+        paidTotal: { increment: payAmount },
+        dueTotal: 0n,
+        status: 'COMPLETED',
+      },
+    });
+
+    // If customer has due ledger, adjust
+    if (invoice.customerId) {
+      const customer = await prisma.customer.findUnique({
+        where: { id: invoice.customerId },
+      });
+      const currentDue = customer?.dueBalance ?? 0n;
+      const newDue = currentDue > payAmount ? currentDue - payAmount : 0n;
+
+      await prisma.customer.update({
+        where: { id: invoice.customerId },
+        data: { dueBalance: newDue },
+      });
+
+      await prisma.customerLedger.create({
+        data: {
+          tenantId: invoice.tenantId,
+          customerId: invoice.customerId,
+          type: 'PAYMENT_RECEIVED',
+          amount: payAmount,
+          balanceAfter: newDue,
+          referenceId: payment.id,
+          notes: `Public online settlement (${provider}) for invoice ${invoice.invoiceNumber}`,
+        },
+      });
+    }
+
+    // Instant Cashier Real-time Sync via Socket.io
+    emitToTenant(invoice.tenantId, 'payment:confirmed', {
+      paymentId: payment.id,
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      amount: Number(payAmount),
+      provider,
+      reference: trxId,
+    });
+
+    return {
+      success: true,
+      message: 'Payment verified and invoice settled successfully.',
+      invoiceNumber: invoice.invoiceNumber,
+      transactionId: trxId,
+      amount: Number(payAmount),
+    };
+  }
 }

@@ -25,3 +25,28 @@ reportsRouter.get(
   requireAnyPermission(Permission.REPORT_VIEW_OWN, Permission.REPORT_VIEW_ALL),
   reportsController.getDuesAging
 );
+
+reportsRouter.get(
+  '/sales-detailed',
+  requireAnyPermission(Permission.REPORT_VIEW_OWN, Permission.REPORT_VIEW_ALL),
+  reportsController.getSalesDetailed
+);
+
+reportsRouter.get(
+  '/profit-loss',
+  requireAnyPermission(Permission.REPORT_VIEW_OWN, Permission.REPORT_VIEW_ALL),
+  reportsController.getProfitLoss
+);
+
+reportsRouter.get(
+  '/stock-value',
+  requireAnyPermission(Permission.REPORT_VIEW_OWN, Permission.REPORT_VIEW_ALL),
+  reportsController.getStockValuation
+);
+
+reportsRouter.get(
+  '/vat-summary',
+  requireAnyPermission(Permission.REPORT_VIEW_OWN, Permission.REPORT_VIEW_ALL),
+  reportsController.getVatSummary
+);
+

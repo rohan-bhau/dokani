@@ -7,6 +7,11 @@ export const requirePermissions = (...required: string[]) => {
     try {
       const { permissions } = getRequestContext();
 
+      if (permissions.includes('*')) {
+        next();
+        return;
+      }
+
       const hasAll = required.every((reqPerm) => permissions.includes(reqPerm));
 
       if (!hasAll) {
@@ -25,6 +30,11 @@ export const requireAnyPermission = (...required: string[]) => {
   return (_req: Request, _res: Response, next: NextFunction): void => {
     try {
       const { permissions } = getRequestContext();
+
+      if (permissions.includes('*')) {
+        next();
+        return;
+      }
 
       const hasAny = required.some((reqPerm) => permissions.includes(reqPerm));
 

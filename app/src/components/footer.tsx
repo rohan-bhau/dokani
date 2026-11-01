@@ -1,9 +1,19 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Store } from 'lucide-react';
 
 export function Footer() {
+  const pathname = usePathname();
+
+  if (pathname?.startsWith('/pay/') || pathname?.startsWith('/pos')) {
+    return null;
+  }
+
   return (
     <footer className="border-t border-slate-200 bg-white py-12 text-slate-600">
+
       <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           <div className="space-y-3 md:col-span-1">
@@ -33,7 +43,11 @@ export function Footer() {
               <li>
                 <Link href="/features" className="hover:text-brand">All Features</Link>
               </li>
+              <li>
+                <Link href="/pricing" className="hover:text-brand">Pricing & Plans</Link>
+              </li>
             </ul>
+
           </div>
 
           <div>

@@ -151,6 +151,47 @@ export class AuthRepository {
       data: { revokedAt: new Date() },
     });
   }
+
+  async updateUser(id: string, data: Partial<{ name: string; language: string; showBanglaDigits: boolean; approvalPin: string }>) {
+    return prisma.user.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async findApproversInTenant(tenantId: string) {
+    return prisma.user.findMany({
+      where: {
+        tenantId,
+        isActive: true,
+        userRoles: {
+          some: {
+            role: {
+              name: { in: ['OWNER', 'MANAGER'] },
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        approvalPin: true,
+      },
+    });
+  }
+
+  async updateUserPassword(phone: string, passwordHash: string) {
+    const user = await prisma.user.findFirst({ where: { phone } });
+    if (!user) {
+      throw new Error('User not found');
+    }
+    return prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash },
+    });
+  }
 }
+
+
 
 export const authRepository = new AuthRepository();

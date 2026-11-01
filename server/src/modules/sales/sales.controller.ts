@@ -77,6 +77,46 @@ export class SalesController {
       next(err);
     }
   };
+
+  processReturn = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { tenantId, userId } = getRequestContext();
+      const saleReturn = await this.service.processReturn(
+        tenantId,
+        req.params.id as string,
+        req.body,
+        userId
+      );
+
+      res.status(201).json({
+        success: true,
+        statusCode: 201,
+        message: 'Return processed and inventory restocked successfully.',
+        data: saleReturn,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  listReturns = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { tenantId } = getRequestContext();
+      const returns = await this.service.listReturns(
+        tenantId,
+        req.query.invoiceId as string | undefined
+      );
+
+      res.status(200).json({
+        success: true,
+        statusCode: 200,
+        message: 'Returns retrieved successfully.',
+        data: returns,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
 }
 
 export const salesController = new SalesController();

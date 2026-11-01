@@ -41,7 +41,73 @@ export const paymentApi = baseApi.injectEndpoints({
     >({
       query: (id) => `/payments/${id}/status`,
     }),
+
+    getPublicInvoice: builder.query<
+      {
+        success: boolean;
+        data: {
+          id: string;
+          invoiceNumber: string;
+          createdAt: string;
+          status: string;
+          subtotal: number;
+          discount: number;
+          vatTotal: number;
+          total: number;
+          paidTotal: number;
+          dueTotal: number;
+          tenant: {
+            name: string;
+            phone: string | null;
+            logoUrl: string | null;
+            receiptFooter: string | null;
+          };
+          customer: {
+            name: string;
+            phone: string;
+          } | null;
+          items: Array<{
+            id: string;
+            productName: string;
+            quantity: number;
+            unitPrice: number;
+            lineTotal: number;
+          }>;
+        };
+      },
+      string
+    >({
+      query: (token) => `/payments/public/${token}`,
+    }),
+
+    completeSimulatedPayment: builder.mutation<
+      {
+        success: boolean;
+        message: string;
+        invoiceNumber: string;
+        transactionId: string;
+        amount: number;
+      },
+      {
+        token: string;
+        provider: 'BKASH' | 'SSLCOMMERZ';
+        account?: string;
+        pin?: string;
+      }
+    >({
+      query: ({ token, ...body }) => ({
+        url: `/payments/public/${token}/complete-simulated`,
+        method: 'POST',
+        body,
+      }),
+    }),
   }),
 });
 
-export const { useInitiatePaymentMutation, useGetPaymentStatusQuery } = paymentApi;
+export const {
+  useInitiatePaymentMutation,
+  useGetPaymentStatusQuery,
+  useGetPublicInvoiceQuery,
+  useCompleteSimulatedPaymentMutation,
+} = paymentApi;
+

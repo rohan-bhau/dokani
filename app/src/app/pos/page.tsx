@@ -163,6 +163,20 @@ export default function PosPage() {
     return { subtotal: sub, vatTotal: Math.round(vat), grandTotal: Math.round(total) };
   }, [cart, cartDiscount]);
 
+  const categories = useMemo(() => {
+    const list = new Set<string>();
+    products.forEach((p) => {
+      const catName = (p as any).category?.name;
+      if (catName) list.add(catName.toUpperCase());
+    });
+    return ['ALL', ...Array.from(list)];
+  }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    if (selectedCategory === 'ALL') return products;
+    return products.filter((p) => (p as any).category?.name?.toUpperCase() === selectedCategory);
+  }, [products, selectedCategory]);
+
   return (
     <AuthGuard>
       <div className="mx-auto max-w-7xl w-full px-4 py-4 sm:px-6 md:px-8 flex-1 flex flex-col">
@@ -198,7 +212,7 @@ export default function PosPage() {
           </div>
 
           <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto text-xs">
-            {['ALL', 'GROCERY', 'BEVERAGE', 'SNACKS'].map((cat) => (
+            {categories.map((cat) => (
               <button
                 key={cat}
                 type="button"
@@ -223,14 +237,14 @@ export default function PosPage() {
                 <div key={i} className="h-28 rounded-lg bg-slate-100 animate-pulse border border-border" />
               ))}
             </div>
-          ) : products.length === 0 ? (
+          ) : filteredProducts.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center p-8 text-center text-slate-400">
               <Package className="h-10 w-10 mb-2 stroke-1" />
               <p className="text-xs">No matching products found.</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-              {products.map((p) => {
+              {filteredProducts.map((p) => {
                 const isOutOfStock = p.stock <= 0;
                 const isLowStock = !isOutOfStock && p.stock <= p.reorderLevel;
 

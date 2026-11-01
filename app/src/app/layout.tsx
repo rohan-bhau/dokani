@@ -1,21 +1,8 @@
 import type { Metadata } from 'next';
-import { Inter, Noto_Sans_Bengali } from 'next/font/google';
 import { Navigation } from '@/components/navigation';
 import { Footer } from '@/components/footer';
 import { Providers } from '@/components/providers';
 import './globals.css';
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-sans',
-  display: 'swap',
-});
-
-const notoSansBengali = Noto_Sans_Bengali({
-  subsets: ['bengali'],
-  variable: '--font-bangla',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: 'Dokani - Retail POS & Inventory Management System',
@@ -28,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${notoSansBengali.variable}`}>
+    <html lang="en">
       <body className="min-h-screen bg-canvas font-sans text-slate-900 antialiased flex flex-col justify-between">
         <Providers>
           <div className="flex min-h-screen flex-col">

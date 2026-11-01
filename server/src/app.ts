@@ -20,6 +20,9 @@ import { auditRouter } from './modules/audit/audit.routes.js';
 import { billingRouter } from './modules/billing/billing.routes.js';
 import { adminRouter } from './modules/admin/admin.routes.js';
 import { expenseRouter } from './modules/expenses/expense.routes.js';
+import { staffRouter } from './modules/staff/staff.routes.js';
+import { settingsRouter } from './modules/settings/settings.routes.js';
+import { posRouter } from './modules/pos/pos.routes.js';
 
 (BigInt.prototype as unknown as { toJSON: () => number }).toJSON = function () {
   return Number(this);
@@ -88,6 +91,9 @@ export const createApp = (): Express => {
   app.use('/api/v1/billing', billingRouter);
   app.use('/api/v1/admin', adminRouter);
   app.use('/api/v1/expenses', expenseRouter);
+  app.use('/api/v1/staff', staffRouter);
+  app.use('/api/v1/settings', settingsRouter);
+  app.use('/api/v1/pos', posRouter);
 
   app.use((_req, _res, next) => {
     next(new NotFoundError('Requested endpoint does not exist.'));

@@ -126,6 +126,42 @@ export const reportApi = baseApi.injectEndpoints({
       transformResponse: (response: { success: boolean; data: AuditLogsResponse }) => response.data,
       providesTags: ['AuditLog'],
     }),
+
+    getSalesDetailed: builder.query<
+      any,
+      { startDate?: string; endDate?: string; groupBy?: 'day' | 'week' | 'month' } | void
+    >({
+      query: (params) => ({
+        url: '/reports/sales-detailed',
+        params: params || {},
+      }),
+      transformResponse: (response: { success: boolean; data: any }) => response.data,
+      providesTags: ['Report'],
+    }),
+
+    getProfitLoss: builder.query<any, { startDate?: string; endDate?: string } | void>({
+      query: (params) => ({
+        url: '/reports/profit-loss',
+        params: params || {},
+      }),
+      transformResponse: (response: { success: boolean; data: any }) => response.data,
+      providesTags: ['Report'],
+    }),
+
+    getStockValuation: builder.query<any, void>({
+      query: () => '/reports/stock-value',
+      transformResponse: (response: { success: boolean; data: any }) => response.data,
+      providesTags: ['Report', 'Stock'],
+    }),
+
+    getVatSummary: builder.query<any, { startDate?: string; endDate?: string } | void>({
+      query: (params) => ({
+        url: '/reports/vat-summary',
+        params: params || {},
+      }),
+      transformResponse: (response: { success: boolean; data: any }) => response.data,
+      providesTags: ['Report'],
+    }),
   }),
 });
 
@@ -134,4 +170,9 @@ export const {
   useGetTopProductsQuery,
   useGetDuesAgingQuery,
   useGetAuditLogsQuery,
+  useGetSalesDetailedQuery,
+  useGetProfitLossQuery,
+  useGetStockValuationQuery,
+  useGetVatSummaryQuery,
 } = reportApi;
+

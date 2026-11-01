@@ -41,6 +41,7 @@ export interface InvoiceResponse {
   paidTotal: number;
   dueTotal: number;
   idempotencyKey: string | null;
+  paymentToken?: string | null;
   notes: string | null;
   createdBy: string | null;
   createdAt: string;
@@ -94,6 +95,72 @@ export const salesApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['Product', 'Stock', 'InventoryAlert'],
     }),
+
+    processReturn: builder.mutation<
+      {
+        success: boolean;
+        message: string;
+        data: {
+          returnNumber: string;
+          refundAmount: number;
+          invoice: InvoiceResponse;
+        };
+      },
+      {
+        id: string;
+        body: {
+          items: Array<{ productId: string; quantity: number }>;
+          reason: 'DAMAGED' | 'CHANGED_MIND' | 'WRONG_ITEM' | 'OTHER';
+          refundMethod: 'CASH' | 'BKASH' | 'CREDIT_ADJUST';
+          notes?: string;
+          approvalPin?: string;
+        };
+      }
+    >({
+      query: ({ id, body }) => ({
+        url: `/sales/${id}/return`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Product', 'Stock', 'InventoryAlert'],
+    }),
+
+    getReturns: builder.query<
+      {
+        success: boolean;
+        data: {
+          returns: Array<{
+            id: string;
+            returnNumber: string;
+            refundAmount: number;
+            refundMethod: string;
+            reason: string;
+            notes: string | null;
+            createdAt: string;
+            invoice: {
+              invoiceNumber: string;
+              customer: { name: string; phone: string } | null;
+            };
+            items: Array<{
+              id: string;
+              quantity: number;
+              unitPrice: number;
+              lineTotal: number;
+              product: { name: string; sku: string };
+            }>;
+          }>;
+          total: number;
+          page: number;
+          totalPages: number;
+        };
+      },
+      { page?: number; limit?: number }
+    >({
+      query: (params) => ({
+        url: '/sales/returns/list',
+        params,
+      }),
+    }),
   }),
 });
 
@@ -102,4 +169,7 @@ export const {
   useGetSaleByIdQuery,
   useGetSalesQuery,
   useVoidSaleMutation,
+  useProcessReturnMutation,
+  useGetReturnsQuery,
 } = salesApi;
+

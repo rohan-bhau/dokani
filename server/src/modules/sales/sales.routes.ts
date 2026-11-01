@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   createSaleSchema,
+  createSaleReturnSchema,
   Permission,
   querySaleSchema,
   voidSaleSchema,
@@ -11,7 +12,7 @@ import { validateRequest } from '../../middleware/validate.js';
 import { idempotencyMiddleware } from './idempotency.middleware.js';
 import { salesController } from './sales.controller.js';
 
-export const salesRouter = Router();
+export const salesRouter: Router = Router();
 
 salesRouter.use(authenticate);
 
@@ -31,6 +32,12 @@ salesRouter.get(
 );
 
 salesRouter.get(
+  '/returns/list',
+  requireAnyPermission(Permission.REPORT_VIEW_OWN, Permission.REPORT_VIEW_ALL),
+  salesController.listReturns
+);
+
+salesRouter.get(
   '/:id',
   requireAnyPermission(Permission.REPORT_VIEW_OWN, Permission.REPORT_VIEW_ALL),
   salesController.getById
@@ -41,4 +48,11 @@ salesRouter.post(
   requirePermissions(Permission.SALE_VOID),
   validateRequest({ body: voidSaleSchema }),
   salesController.void
+);
+
+salesRouter.post(
+  '/:id/return',
+  requireAnyPermission(Permission.SALE_RETURN, Permission.SALE_VOID),
+  validateRequest({ body: createSaleReturnSchema }),
+  salesController.processReturn
 );

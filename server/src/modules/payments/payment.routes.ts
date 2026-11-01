@@ -7,6 +7,10 @@ import { paymentController } from './payment.controller.js';
 
 export const paymentRouter = Router();
 
+// Public Customer-Facing Payment Checkout Link
+paymentRouter.get('/public/:token', paymentController.getPublicInvoice);
+paymentRouter.post('/public/:token/complete-simulated', paymentController.completeSimulatedPublicPayment);
+
 // Protected routes (Cashier / POS staff)
 paymentRouter.post(
   '/initiate',

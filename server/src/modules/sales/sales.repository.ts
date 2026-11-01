@@ -134,6 +134,7 @@ export class SalesRepository {
             paidTotal,
             dueTotal,
             idempotencyKey: idempotencyKey ?? null,
+            paymentToken: crypto.randomUUID(),
             notes: input.notes ?? null,
             createdBy: userId ?? null,
             items: {
@@ -355,6 +356,217 @@ export class SalesRepository {
         timeout: 30000,
       }
     );
+  }
+
+  async processReturn(
+    tenantId: string,
+    invoiceId: string,
+    input: import('@dokani/shared').CreateSaleReturnInput,
+    userId?: string
+  ) {
+    return prisma.$transaction(
+      async (tx) => {
+        const invoice = await tx.invoice.findFirst({
+          where: { id: invoiceId, tenantId },
+          include: {
+            items: { include: { product: true } },
+            saleReturns: { include: { items: true } },
+            customer: true,
+          },
+        });
+
+        if (!invoice) {
+          throw new NotFoundError('Invoice not found.');
+        }
+
+        if (invoice.status === 'VOIDED') {
+          throw new BadRequestError('Cannot return items from a voided invoice.');
+        }
+
+        const alreadyReturnedMap = new Map<string, number>();
+        for (const sr of invoice.saleReturns) {
+          for (const item of sr.items) {
+            alreadyReturnedMap.set(
+              item.productId,
+              (alreadyReturnedMap.get(item.productId) || 0) + item.quantity
+            );
+          }
+        }
+
+        let totalRefund = 0n;
+        const returnItemsToCreate: Array<{
+          productId: string;
+          quantity: number;
+          unitPrice: bigint;
+          unitCost: bigint;
+          lineTotal: bigint;
+        }> = [];
+
+        for (const itemInput of input.items) {
+          const originalItem = invoice.items.find((i) => i.productId === itemInput.productId);
+          if (!originalItem) {
+            throw new BadRequestError(`Product ${itemInput.productId} was not part of this invoice.`);
+          }
+
+          const alreadyReturned = alreadyReturnedMap.get(itemInput.productId) || 0;
+          const remainingQuantity = originalItem.quantity - alreadyReturned;
+
+          if (itemInput.quantity > remainingQuantity) {
+            throw new BadRequestError(
+              `Cannot return ${itemInput.quantity} of ${originalItem.product.name}. Only ${remainingQuantity} available for return.`
+            );
+          }
+
+          const unitPrice = originalItem.unitPrice;
+          const unitCost = originalItem.unitCost;
+          const lineTotal = BigInt(itemInput.quantity) * unitPrice;
+          totalRefund += lineTotal;
+
+          returnItemsToCreate.push({
+            productId: itemInput.productId,
+            quantity: itemInput.quantity,
+            unitPrice,
+            unitCost,
+            lineTotal,
+          });
+        }
+
+        const counter = await tx.$queryRaw<Array<{ last_value: bigint }>>`
+          INSERT INTO tenant_counters (tenant_id, counter_type, last_value, updated_at)
+          VALUES (${tenantId}::uuid, 'RETURN', 1, NOW())
+          ON CONFLICT (tenant_id, counter_type)
+          DO UPDATE SET last_value = tenant_counters.last_value + 1, updated_at = NOW()
+          RETURNING last_value
+        `;
+        const lastVal = counter[0]?.last_value ?? 1n;
+        const year = new Date().getFullYear();
+        const returnNumber = `RET-${year}-${String(lastVal).padStart(6, '0')}`;
+
+        const saleReturn = await tx.saleReturn.create({
+          data: {
+            tenantId,
+            invoiceId,
+            returnNumber,
+            refundAmount: totalRefund,
+            refundMethod: input.refundMethod,
+            reason: input.reason,
+            notes: input.notes ?? null,
+            createdBy: userId ?? null,
+            items: {
+              create: returnItemsToCreate.map((i) => ({
+                productId: i.productId,
+                quantity: i.quantity,
+                unitPrice: i.unitPrice,
+                unitCost: i.unitCost,
+                lineTotal: i.lineTotal,
+              })),
+            },
+          },
+          include: {
+            items: {
+              include: {
+                product: { select: { name: true, sku: true, unit: true } },
+              },
+            },
+          },
+        });
+
+        for (const item of returnItemsToCreate) {
+          await tx.stockLevel.update({
+            where: {
+              tenantId_productId: {
+                tenantId,
+                productId: item.productId,
+              },
+            },
+            data: {
+              quantity: { increment: item.quantity },
+            },
+          });
+
+          await tx.stockMovement.create({
+            data: {
+              tenantId,
+              productId: item.productId,
+              type: 'SALE_RETURN',
+              quantity: item.quantity,
+              unitCost: item.unitCost,
+              referenceType: 'SALE_RETURN',
+              referenceId: saleReturn.id,
+              reason: `Return ${returnNumber}: ${input.notes || input.reason}`,
+              createdBy: userId ?? null,
+            },
+          });
+        }
+
+        if (input.refundMethod === 'CREDIT_ADJUST' && invoice.customerId) {
+          const currentCustomer = await tx.customer.findUnique({
+            where: { id: invoice.customerId },
+          });
+
+          const currentDue = currentCustomer?.dueBalance ?? 0n;
+          const newDue = currentDue > totalRefund ? currentDue - totalRefund : 0n;
+
+          await tx.customer.update({
+            where: { id: invoice.customerId },
+            data: { dueBalance: newDue },
+          });
+
+          await tx.customerLedger.create({
+            data: {
+              tenantId,
+              customerId: invoice.customerId,
+              type: 'RETURN_CREDIT',
+              amount: totalRefund,
+              balanceAfter: newDue,
+              referenceId: saleReturn.id,
+              notes: `Credit adjustment for return ${returnNumber}`,
+              createdBy: userId ?? null,
+            },
+          });
+        }
+
+        let allSoldItemsReturned = true;
+        for (const origItem of invoice.items) {
+          const prevReturned = alreadyReturnedMap.get(origItem.productId) || 0;
+          const thisReturn = returnItemsToCreate.find((i) => i.productId === origItem.productId)?.quantity || 0;
+          if (origItem.quantity > prevReturned + thisReturn) {
+            allSoldItemsReturned = false;
+            break;
+          }
+        }
+
+        const updatedStatus = allSoldItemsReturned ? 'FULL_RETURN' : 'PARTIAL_RETURN';
+        await tx.invoice.update({
+          where: { id: invoiceId },
+          data: { status: updatedStatus },
+        });
+
+        return saleReturn;
+      },
+      {
+        maxWait: 10000,
+        timeout: 30000,
+      }
+    );
+  }
+
+  async listReturns(tenantId: string, invoiceId?: string) {
+    const where: { tenantId: string; invoiceId?: string } = { tenantId };
+    if (invoiceId) where.invoiceId = invoiceId;
+
+    return prisma.saleReturn.findMany({
+      where,
+      include: {
+        items: {
+          include: {
+            product: { select: { name: true, sku: true, unit: true } },
+          },
+        },
+        invoice: { select: { invoiceNumber: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 }
 

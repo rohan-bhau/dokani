@@ -138,24 +138,41 @@ export default function LoginPage() {
             </Link>
           </p>
 
-          <div className="mt-4 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
-            <span className="font-semibold text-slate-700">Quick Test Credentials:</span>
-            <div className="mt-2 flex flex-col gap-1.5">
+          <div className="mt-4 rounded-xl bg-slate-50 p-3.5 text-xs text-slate-600 border border-slate-200">
+            <span className="font-bold text-slate-900 block">Quick Demo Credentials (Pass: Password123!):</span>
+            <div className="mt-2.5 flex flex-col gap-2">
               <button
                 type="button"
                 onClick={() => handleUseDemo('01711111111')}
-                className="flex items-center justify-between rounded border border-slate-200 bg-white px-2.5 py-1.5 text-left text-xs transition hover:bg-slate-100"
+                className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-xs transition hover:bg-slate-100 hover:border-slate-300"
               >
-                <span className="font-medium text-slate-800">Karim Store (Owner)</span>
-                <span className="text-[11px] text-brand">Fill: 01711111111</span>
+                <div>
+                  <span className="font-semibold text-slate-900 block">Karim Store</span>
+                  <span className="text-[11px] text-slate-500">Owner (Full system control)</span>
+                </div>
+                <span className="text-[11px] font-mono font-semibold text-brand">01711111111</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleUseDemo('01711111112')}
+                className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-xs transition hover:bg-slate-100 hover:border-slate-300"
+              >
+                <div>
+                  <span className="font-semibold text-slate-900 block">Karim Store</span>
+                  <span className="text-[11px] text-slate-500">Cashier (POS counter billing)</span>
+                </div>
+                <span className="text-[11px] font-mono font-semibold text-brand">01711111112</span>
               </button>
               <button
                 type="button"
                 onClick={() => handleUseDemo('01822222222')}
-                className="flex items-center justify-between rounded border border-slate-200 bg-white px-2.5 py-1.5 text-left text-xs transition hover:bg-slate-100"
+                className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-xs transition hover:bg-slate-100 hover:border-slate-300"
               >
-                <span className="font-medium text-slate-800">Rahim Store (Owner)</span>
-                <span className="text-[11px] text-brand">Fill: 01822222222</span>
+                <div>
+                  <span className="font-semibold text-slate-900 block">Rahim Super Mart</span>
+                  <span className="text-[11px] text-slate-500">Owner (Full system control)</span>
+                </div>
+                <span className="text-[11px] font-mono font-semibold text-brand">01822222222</span>
               </button>
             </div>
           </div>

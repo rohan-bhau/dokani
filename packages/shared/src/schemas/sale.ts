@@ -13,7 +13,7 @@ export type CheckoutItemInput = z.infer<typeof checkoutItemSchema>;
 export const paymentInputSchema = z
   .object({
     method: z.enum(['CASH', 'BKASH', 'NAGAD', 'CARD', 'CREDIT_BAKI']),
-    amount: z.number().int().positive('Payment amount must be greater than zero'),
+    amount: z.number().int().nonnegative('Payment amount cannot be negative'),
     reference: z.string().trim().max(100).optional(),
   })
   .strict();

@@ -67,7 +67,35 @@ export const authApi = baseApi.injectEndpoints({
         body,
       }),
     }),
+    getProfile: builder.query<ApiResponse<any>, void>({
+      query: () => '/auth/profile',
+      providesTags: ['AuditLog'],
+    }),
+    updateProfile: builder.mutation<ApiResponse<any>, { name?: string; language?: string; showBanglaDigits?: boolean }>({
+      query: (body) => ({
+        url: '/auth/profile',
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['AuditLog'],
+    }),
+    setApprovalPin: builder.mutation<ApiResponse<any>, { pin: string }>({
+      query: (body) => ({
+        url: '/auth/set-approval-pin',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['AuditLog'],
+    }),
   }),
 });
 
-export const { useLoginMutation, useSignupMutation, useLogoutMutation } = authApi;
+export const {
+  useLoginMutation,
+  useSignupMutation,
+  useLogoutMutation,
+  useGetProfileQuery,
+  useUpdateProfileMutation,
+  useSetApprovalPinMutation,
+} = authApi;
+

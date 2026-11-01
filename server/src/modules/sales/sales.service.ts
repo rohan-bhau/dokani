@@ -36,6 +36,39 @@ export class SalesService {
     return this.serializeInvoice(invoice);
   }
 
+  async processReturn(
+    tenantId: string,
+    invoiceId: string,
+    input: import('@dokani/shared').CreateSaleReturnInput,
+    userId?: string
+  ) {
+    const saleReturn = await this.repo.processReturn(tenantId, invoiceId, input, userId);
+    return {
+      ...saleReturn,
+      refundAmount: Number(saleReturn.refundAmount),
+      items: saleReturn.items.map((i) => ({
+        ...i,
+        unitPrice: Number(i.unitPrice),
+        unitCost: Number(i.unitCost),
+        lineTotal: Number(i.lineTotal),
+      })),
+    };
+  }
+
+  async listReturns(tenantId: string, invoiceId?: string) {
+    const returns = await this.repo.listReturns(tenantId, invoiceId);
+    return returns.map((sr) => ({
+      ...sr,
+      refundAmount: Number(sr.refundAmount),
+      items: sr.items.map((i) => ({
+        ...i,
+        unitPrice: Number(i.unitPrice),
+        unitCost: Number(i.unitCost),
+        lineTotal: Number(i.lineTotal),
+      })),
+    }));
+  }
+
   private serializeInvoice(invoice: {
     subtotal: bigint;
     discount: bigint;

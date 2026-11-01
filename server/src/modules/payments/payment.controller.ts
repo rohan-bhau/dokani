@@ -76,6 +76,39 @@ export class PaymentController {
       next(err);
     }
   };
+
+  getPublicInvoice = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const token = req.params.token as string;
+      const invoice = await this.service.getPublicInvoiceByToken(token);
+
+      res.status(200).json({
+        success: true,
+        statusCode: 200,
+        message: 'Invoice retrieved for public payment.',
+        data: invoice,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  completeSimulatedPublicPayment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const token = req.params.token as string;
+      const { provider, transactionId } = req.body;
+      const result = await this.service.completeSimulatedPublicPayment(token, provider, transactionId);
+
+      res.status(200).json({
+        success: true,
+        statusCode: 200,
+        message: result.message,
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
 }
 
 export const paymentController = new PaymentController();
