@@ -167,6 +167,7 @@ export const salesApi = baseApi.injectEndpoints({
 export const {
   useCreateSaleMutation,
   useGetSaleByIdQuery,
+  useLazyGetSaleByIdQuery,
   useGetSalesQuery,
   useVoidSaleMutation,
   useProcessReturnMutation,

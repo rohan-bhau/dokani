@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Search,
   ShoppingCart,
@@ -11,10 +12,15 @@ import {
   PauseCircle,
   Package,
   Layers,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  X,
 } from 'lucide-react';
 import { useGetProductsQuery, type ProductItem } from '@/store/productApi';
-import type { InvoiceResponse } from '@/store/salesApi';
+import { useLazyGetSaleByIdQuery, type InvoiceResponse } from '@/store/salesApi';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+import { useSocket } from '@/hooks/useSocket';
 import { CheckoutModal } from '@/components/pos/checkout-modal';
 import { PrintableReceipt } from '@/components/pos/printable-receipt';
 import { AuthGuard } from '@/components/auth-guard';
@@ -32,7 +38,19 @@ interface HeldOrder {
   customerName?: string;
 }
 
-export default function PosPage() {
+interface GatewaySuccessData {
+  invoice: InvoiceResponse;
+  tranId: string;
+  valId: string;
+  bankTranId: string;
+  amount: string;
+}
+
+function PosContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [triggerGetSale] = useLazyGetSaleByIdQuery();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -46,6 +64,8 @@ export default function PosPage() {
   // Modals
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [completedInvoice, setCompletedInvoice] = useState<InvoiceResponse | null>(null);
+  const [gatewaySuccessData, setGatewaySuccessData] = useState<GatewaySuccessData | null>(null);
+  const [paymentBanner, setPaymentBanner] = useState<{ type: 'error' | 'warning'; message: string } | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -54,6 +74,71 @@ export default function PosPage() {
     page: 1,
     limit: 100,
     q: searchTerm.trim() || undefined,
+  });
+
+  // Handle return from official SSLCommerz hosted payment gateway
+  useEffect(() => {
+    const paymentStatus = searchParams?.get('payment_status');
+    const invoiceId = searchParams?.get('invoice_id');
+
+    if (paymentStatus === 'success' && invoiceId) {
+      triggerGetSale(invoiceId)
+        .unwrap()
+        .then((res) => {
+          setGatewaySuccessData({
+            invoice: res.data,
+            tranId: searchParams.get('tran_id') || '',
+            valId: searchParams.get('val_id') || '',
+            bankTranId: searchParams.get('bank_tran_id') || '',
+            amount: searchParams.get('amount') || '',
+          });
+          setCart([]);
+          setCartDiscount(0);
+          router.replace('/pos');
+        })
+        .catch(() => {
+          setPaymentBanner({
+            type: 'error',
+            message: 'Failed to retrieve invoice details after payment.',
+          });
+          router.replace('/pos');
+        });
+    } else if (paymentStatus === 'cancelled') {
+      setPaymentBanner({
+        type: 'warning',
+        message: 'SSLCommerz payment session was cancelled.',
+      });
+      router.replace('/pos');
+    } else if (paymentStatus === 'failed') {
+      const reason = searchParams?.get('reason') || 'Transaction could not be completed.';
+      setPaymentBanner({
+        type: 'error',
+        message: `SSLCommerz payment failed: ${reason}`,
+      });
+      router.replace('/pos');
+    }
+  }, [searchParams, router, triggerGetSale]);
+
+  // Real-time synchronization via Socket.io
+  useSocket({
+    onPaymentConfirmed: (event) => {
+      if (event.invoiceId) {
+        triggerGetSale(event.invoiceId)
+          .unwrap()
+          .then((res) => {
+            setGatewaySuccessData({
+              invoice: res.data,
+              tranId: event.reference || 'TXN_VERIFIED',
+              valId: '',
+              bankTranId: event.reference || '',
+              amount: event.amount ? String(event.amount) : '',
+            });
+            setCart([]);
+            setCartDiscount(0);
+          })
+          .catch(() => {});
+      }
+    },
   });
 
   const products = productsData?.data.products ?? [];
@@ -180,6 +265,27 @@ export default function PosPage() {
   return (
     <AuthGuard>
       <div className="mx-auto max-w-7xl w-full px-4 py-4 sm:px-6 md:px-8 flex-1 flex flex-col">
+        {paymentBanner && (
+          <div
+            className={`mb-3 flex items-center justify-between rounded-xl border p-3 text-xs ${
+              paymentBanner.type === 'error'
+                ? 'border-rose-200 bg-rose-50 text-rose-800'
+                : 'border-amber-200 bg-amber-50 text-amber-800'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{paymentBanner.message}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPaymentBanner(null)}
+              className="p-1 hover:opacity-70"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
         <div className="flex flex-1 flex-col gap-4 lg:flex-row h-full min-h-[calc(100vh-14rem)]">
           {/* LEFT: Product Catalog & Search (65%) */}
       <div className="flex flex-1 flex-col rounded-lg border border-border bg-surface shadow-sm overflow-hidden">
@@ -508,13 +614,95 @@ export default function PosPage() {
         }}
       />
 
-      {/* Printable 80mm Receipt */}
-      <PrintableReceipt
-        invoice={completedInvoice}
-        onClose={() => setCompletedInvoice(null)}
-      />
+      {/* SSLCommerz Verified Transaction Modal */}
+      {gatewaySuccessData && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs"
+        >
+          <div className="relative w-full max-w-md rounded-2xl bg-white border border-border shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3 border-b border-border pb-4">
+              <div className="h-11 w-11 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Payment Verified via SSLCommerz
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Transaction details successfully saved to database.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2 text-xs">
+              <div className="flex justify-between py-1 border-b border-slate-200">
+                <span className="text-slate-500 font-medium">Invoice Number:</span>
+                <span className="font-bold text-slate-900">{gatewaySuccessData.invoice.invoiceNumber}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-200">
+                <span className="text-slate-500 font-medium">Transaction ID (tran_id):</span>
+                <span className="font-mono font-bold text-indigo-700">{gatewaySuccessData.tranId || 'TXN_VERIFIED'}</span>
+              </div>
+              {gatewaySuccessData.bankTranId && (
+                <div className="flex justify-between py-1 border-b border-slate-200">
+                  <span className="text-slate-500 font-medium">Bank Tran ID:</span>
+                  <span className="font-mono text-slate-800">{gatewaySuccessData.bankTranId}</span>
+                </div>
+              )}
+              {gatewaySuccessData.valId && (
+                <div className="flex justify-between py-1 border-b border-slate-200">
+                  <span className="text-slate-500 font-medium">Validation ID (val_id):</span>
+                  <span className="font-mono text-slate-700">{gatewaySuccessData.valId}</span>
+                </div>
+              )}
+              <div className="flex justify-between py-1.5 pt-1">
+                <span className="font-semibold text-slate-700">Amount Paid:</span>
+                <span className="text-base font-extrabold text-emerald-700">
+                  ৳{Number(gatewaySuccessData.amount || gatewaySuccessData.invoice.total).toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const inv = gatewaySuccessData.invoice;
+                  setGatewaySuccessData(null);
+                  setCompletedInvoice(inv);
+                }}
+                className="w-full py-3 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 transition flex items-center justify-center gap-2 shadow-xs"
+              >
+                <span>OK / View & Print Receipt</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+        {/* Printable 80mm Receipt */}
+        <PrintableReceipt
+          invoice={completedInvoice}
+          onClose={() => setCompletedInvoice(null)}
+        />
         </div>
       </div>
     </AuthGuard>
+  );
+}
+
+export default function PosPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-surface flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-brand" />
+        </div>
+      }
+    >
+      <PosContent />
+    </Suspense>
   );
 }

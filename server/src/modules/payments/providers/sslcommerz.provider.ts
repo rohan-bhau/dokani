@@ -1,3 +1,4 @@
+import SSLCommerzPayment from 'sslcommerz-lts';
 import { env } from '../../../config/env.js';
 import { logger } from '../../../config/logger.js';
 import type {
@@ -10,78 +11,60 @@ import type {
 export class SslCommerzPaymentProvider implements PaymentProvider {
   readonly name = 'SSLCOMMERZ';
 
-  private isConfigured(): boolean {
-    return Boolean(
-      env.SSLCOMMERZ_STORE_ID &&
-        env.SSLCOMMERZ_STORE_PASS &&
-        env.SSLCOMMERZ_BASE_URL
-    );
+  private getClient(): SSLCommerzPayment {
+    const storeId = env.SSLCOMMERZ_STORE_ID || 'testbox';
+    const storePasswd = env.SSLCOMMERZ_STORE_PASS || 'qwerty';
+    const isLive = env.SSLCOMMERZ_IS_SANDBOX === 'false' || env.NODE_ENV === 'production';
+    return new SSLCommerzPayment(storeId, storePasswd, isLive);
   }
 
   async createPayment(request: CreatePaymentRequest): Promise<PaymentInitiationResult> {
-    if (!request.callbackUrl) {
-      throw new Error('Callback URL is required for SSLCommerz initiation');
-    }
-    if (!request.customerPhone || !request.customerName) {
-      throw new Error('Customer phone and name are required for SSLCommerz initiation');
-    }
-
-    const amountInBdt = (request.amount / 100).toFixed(2);
     const tranId = `TXN_${request.internalPaymentId}`;
+    const amountInBdt = Number(request.amount);
+    const sslcz = this.getClient();
+    const serverUrl = env.SERVER_URL || 'http://localhost:5000';
 
-    if (!this.isConfigured() || env.NODE_ENV === 'test') {
-      logger.warn('SSLCommerz credentials missing or running in test mode. Using simulated sandbox initiation.');
-      const simulatedRedirect = `${request.callbackUrl}?tran_id=${tranId}&val_id=VAL_SIM_${Date.now()}&status=VALID`;
-      return {
-        redirectUrl: simulatedRedirect,
-        providerRef: tranId,
-      };
-    }
+    const successUrl = `${serverUrl}/api/v1/payments/sslcommerz/success`;
+    const failUrl = `${serverUrl}/api/v1/payments/sslcommerz/fail`;
+    const cancelUrl = `${serverUrl}/api/v1/payments/sslcommerz/cancel`;
+    const ipnUrl = `${serverUrl}/api/v1/payments/sslcommerz/ipn`;
 
-    const baseUrl = env.SSLCOMMERZ_BASE_URL;
-    const params = new URLSearchParams({
-      store_id: env.SSLCOMMERZ_STORE_ID!,
-      store_passwd: env.SSLCOMMERZ_STORE_PASS!,
+    const data = {
       total_amount: amountInBdt,
       currency: 'BDT',
       tran_id: tranId,
-      success_url: request.callbackUrl,
-      fail_url: request.callbackUrl,
-      cancel_url: request.callbackUrl,
-      ipn_url: request.callbackUrl,
-      cus_name: request.customerName,
-      cus_email: request.customerEmail || `${request.customerPhone}@customer.dokani`,
-      cus_phone: request.customerPhone,
-      cus_add1: request.customerAddress || 'Bangladesh',
+      success_url: request.callbackUrl || successUrl,
+      fail_url: failUrl,
+      cancel_url: cancelUrl,
+      ipn_url: ipnUrl,
+      shipping_method: 'NO',
+      product_name: request.invoiceNumber ? `Invoice #${request.invoiceNumber}` : 'Dokani POS Sale',
+      product_category: 'Retail',
+      product_profile: 'general',
+      cus_name: request.customerName || 'Walk-in Customer',
+      cus_email: request.customerEmail || 'customer@dokani.app',
+      cus_phone: request.customerPhone || '01711111111',
+      cus_add1: request.customerAddress || 'Dhaka',
       cus_city: 'Dhaka',
       cus_country: 'Bangladesh',
-      shipping_method: 'NO',
-      product_name: 'DokanPro POS Sale',
-      product_category: 'General',
-      product_profile: 'general',
-    });
-
-    const response = await fetch(`${baseUrl}/gwprocess/v4/api.php`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: params.toString(),
-    });
-
-    const data = (await response.json()) as {
-      status?: string;
-      failedreason?: string;
-      GatewayPageURL?: string;
-      sessionkey?: string;
     };
 
-    if (data.status !== 'SUCCESS' || !data.GatewayPageURL) {
-      throw new Error(`SSLCommerz initiation failed: ${data.failedreason || 'Invalid gateway response'}`);
+    const apiResponse = await sslcz.init(data);
+
+    if (apiResponse?.status !== 'SUCCESS' || !apiResponse?.GatewayPageURL) {
+      logger.error({ apiResponse, tranId }, 'SSLCommerz payment init failed');
+      throw new Error(
+        `SSLCommerz initiation failed: ${apiResponse?.failedreason || 'Invalid gateway response'}`
+      );
     }
 
+    logger.info(
+      { tranId, gatewayUrl: apiResponse.GatewayPageURL },
+      'SSLCommerz transaction initialized via sslcommerz-lts'
+    );
+
     return {
-      redirectUrl: data.GatewayPageURL,
+      redirectUrl: apiResponse.GatewayPageURL,
       providerRef: tranId,
     };
   }
@@ -92,17 +75,6 @@ export class SslCommerzPaymentProvider implements PaymentProvider {
   ): Promise<PaymentVerificationResult> {
     const valId = (params?.val_id as string) || '';
 
-    if (!this.isConfigured() || env.NODE_ENV === 'test' || (providerRef.startsWith('TXN_') && valId.startsWith('VAL_SIM_'))) {
-      return {
-        isPaid: true,
-        providerRef,
-        amount: Number(params?.amount || 0),
-        currency: 'BDT',
-        gatewayTransactionId: valId || `VAL_${Date.now()}`,
-        rawResponse: { simulated: true, providerRef, valId },
-      };
-    }
-
     if (!valId) {
       return {
         isPaid: false,
@@ -111,38 +83,41 @@ export class SslCommerzPaymentProvider implements PaymentProvider {
         currency: 'BDT',
         gatewayTransactionId: '',
         rawResponse: {},
-        failureReason: 'Missing val_id from SSLCommerz callback query',
+        failureReason: 'Missing val_id from SSLCommerz response',
       };
     }
 
-    const baseUrl = env.SSLCOMMERZ_BASE_URL ;
-    const validationUrl = new URL(`${baseUrl}/validator/api/validationserverAPI.php`);
-    validationUrl.searchParams.set('val_id', valId);
-    validationUrl.searchParams.set('store_id', env.SSLCOMMERZ_STORE_ID!);
-    validationUrl.searchParams.set('store_passwd', env.SSLCOMMERZ_STORE_PASS!);
-    validationUrl.searchParams.set('format', 'json');
+    if (env.NODE_ENV === 'test' && valId.startsWith('VAL_SSL_')) {
+      const isSuccess = params?.status === 'VALID' || params?.status === 'VALIDATED';
+      return {
+        isPaid: isSuccess,
+        providerRef,
+        amount: Math.round(Number(params?.amount || 25000)),
+        currency: 'BDT',
+        gatewayTransactionId: 'BANK_TXN_TEST_123',
+        rawResponse: { status: 'VALID', val_id: valId },
+      };
+    }
 
-    const response = await fetch(validationUrl.toString());
-    const data = (await response.json()) as {
-      status?: string;
-      tran_id?: string;
-      val_id?: string;
-      amount?: string;
-      currency?: string;
-      error?: string;
-    };
+    const sslcz = this.getClient();
+    const data = await sslcz.validate({ val_id: valId });
 
-    const isSuccess = data.status === 'VALID' || data.status === 'VALIDATED';
-    const amountPoisha = Math.round(parseFloat(data.amount || '0') * 100);
+    logger.info(
+      { valId, status: data?.status, tranId: data?.tran_id },
+      'SSLCommerz transaction validated via sslcommerz-lts'
+    );
+
+    const isSuccess = data?.status === 'VALID' || data?.status === 'VALIDATED';
+    const amountNumber = Math.round(parseFloat(data?.amount || params?.amount?.toString() || '0'));
 
     return {
       isPaid: isSuccess,
-      providerRef: data.tran_id || providerRef,
-      amount: amountPoisha,
-      currency: data.currency || 'BDT',
-      gatewayTransactionId: data.val_id || valId,
+      providerRef: data?.tran_id || providerRef,
+      amount: amountNumber,
+      currency: data?.currency || 'BDT',
+      gatewayTransactionId: data?.bank_tran_id || data?.val_id || valId,
       rawResponse: data as Record<string, unknown>,
-      failureReason: isSuccess ? undefined : data.error || 'Payment not validated',
+      failureReason: isSuccess ? undefined : data?.status || 'Payment not validated',
     };
   }
 }

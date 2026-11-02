@@ -6,7 +6,6 @@ import {
   Loader2,
   Banknote,
   CreditCard,
-  Smartphone,
   UserMinus,
   AlertCircle,
   ExternalLink,
@@ -15,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useCreateSaleMutation, type InvoiceResponse } from '@/store/salesApi';
 import { useGetCustomersQuery, useCreateCustomerMutation } from '@/store/customerApi';
+import { useInitiatePaymentMutation } from '@/store/paymentApi';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -27,7 +27,7 @@ interface CheckoutModalProps {
   onSuccess: (invoice: InvoiceResponse) => void;
 }
 
-type PaymentMethodType = 'CASH' | 'BKASH' | 'CARD' | 'CREDIT_BAKI';
+type PaymentMethodType = 'CASH' | 'CARD' | 'CREDIT_BAKI';
 
 export function CheckoutModal({
   isOpen,
@@ -38,6 +38,7 @@ export function CheckoutModal({
   onSuccess,
 }: CheckoutModalProps) {
   const [createSale, { isLoading: isCreatingSale }] = useCreateSaleMutation();
+  const [initiatePayment, { isLoading: isInitiatingPayment }] = useInitiatePaymentMutation();
   const { data: customerData } = useGetCustomersQuery({ limit: 100 });
   const [createCustomer, { isLoading: isCreatingCustomer }] = useCreateCustomerMutation();
 
@@ -47,7 +48,7 @@ export function CheckoutModal({
   const [error, setError] = useState<string | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
-  // Customer state (for Baki or named invoices)
+  // Customer state
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [isQuickAddCustomer, setIsQuickAddCustomer] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState('');
@@ -168,15 +169,15 @@ export function CheckoutModal({
     }
   };
 
-  // 3. Hosted Gateway Redirection (bKash or SSLCommerz)
-  const handleRedirectGateway = async (provider: 'BKASH' | 'SSLCOMMERZ') => {
+  // 3. Official SSLCommerz Hosted Gateway Redirection
+  const handleSslCheckout = async () => {
     setError(null);
     setIsRedirecting(true);
 
     try {
       const idempotencyKey = crypto.randomUUID();
-      const saleMethod = provider === 'BKASH' ? 'BKASH' : 'CARD';
 
+      // Step 1: Create sale invoice record
       const res = await createSale({
         sale: {
           customerId: selectedCustomerId?.trim() || undefined,
@@ -188,7 +189,7 @@ export function CheckoutModal({
           discount: Math.round(discount || 0),
           payments: [
             {
-              method: saleMethod,
+              method: 'CARD',
               amount: 0,
             },
           ],
@@ -197,15 +198,27 @@ export function CheckoutModal({
         idempotencyKey,
       }).unwrap();
 
-      const paymentToken = res.data.paymentToken;
-      if (paymentToken) {
-        window.location.href = `/pay/${paymentToken}?provider=${provider}`;
+      const invoice = res.data;
+
+      // Step 2: Initialize transaction with official sslcommerz-lts
+      const initRes = await initiatePayment({
+        provider: 'SSLCOMMERZ',
+        amount: Math.round(total),
+        invoiceId: invoice.id,
+        customerId: selectedCustomerId?.trim() || undefined,
+        customerName: selectedCustomer?.name || 'Walk-in Customer',
+        customerPhone: selectedCustomer?.phone || '01711111111',
+      }).unwrap();
+
+      if (initRes?.data?.redirectUrl) {
+        // Step 3: Redirect directly to official SSLCommerz hosted checkout page
+        window.location.href = initRes.data.redirectUrl;
       } else {
-        onSuccess(res.data);
+        throw new Error('SSLCommerz gateway URL was not generated.');
       }
     } catch (err: any) {
       setIsRedirecting(false);
-      setError(extractErrorMessage(err, `Failed to initiate ${provider} payment gateway.`));
+      setError(extractErrorMessage(err, 'Failed to initiate SSLCommerz payment gateway.'));
     }
   };
 
@@ -233,7 +246,7 @@ export function CheckoutModal({
           <button
             type="button"
             onClick={onClose}
-            disabled={isCreatingSale || isRedirecting}
+            disabled={isCreatingSale || isRedirecting || isInitiatingPayment}
             className="rounded-lg p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition"
             aria-label="Close"
           >
@@ -248,9 +261,9 @@ export function CheckoutModal({
           </div>
         )}
 
-        {/* 4 Primary Payment Methods Tab Bar */}
+        {/* 3 Payment Methods Tab Bar */}
         <div className="px-6 pt-4">
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {/* CASH */}
             <button
               type="button"
@@ -259,31 +272,14 @@ export function CheckoutModal({
                 setError(null);
                 setReceivedAmount(total);
               }}
-              className={`flex flex-col items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-semibold transition ${
+              className={`flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-xl border text-xs font-semibold transition ${
                 method === 'CASH'
                   ? 'border-emerald-600 bg-emerald-50 text-emerald-900 shadow-xs ring-2 ring-emerald-500/20'
                   : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
               }`}
             >
-              <Banknote className="h-4 w-4 text-emerald-600" />
+              <Banknote className="h-5 w-5 text-emerald-600" />
               <span>Cash</span>
-            </button>
-
-            {/* BKASH PAY */}
-            <button
-              type="button"
-              onClick={() => {
-                setMethod('BKASH');
-                setError(null);
-              }}
-              className={`flex flex-col items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-semibold transition ${
-                method === 'BKASH'
-                  ? 'border-[#E2136E] bg-pink-50 text-[#E2136E] shadow-xs ring-2 ring-pink-500/20'
-                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              <Smartphone className="h-4 w-4 text-[#E2136E]" />
-              <span>bKash</span>
             </button>
 
             {/* SSLCOMMERZ */}
@@ -293,13 +289,13 @@ export function CheckoutModal({
                 setMethod('CARD');
                 setError(null);
               }}
-              className={`flex flex-col items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-semibold transition ${
+              className={`flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-xl border text-xs font-semibold transition ${
                 method === 'CARD'
                   ? 'border-indigo-600 bg-indigo-50 text-indigo-900 shadow-xs ring-2 ring-indigo-500/20'
                   : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
               }`}
             >
-              <CreditCard className="h-4 w-4 text-indigo-600" />
+              <CreditCard className="h-5 w-5 text-indigo-600" />
               <span>SSLCommerz</span>
             </button>
 
@@ -310,13 +306,13 @@ export function CheckoutModal({
                 setMethod('CREDIT_BAKI');
                 setError(null);
               }}
-              className={`flex flex-col items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-semibold transition ${
+              className={`flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-xl border text-xs font-semibold transition ${
                 method === 'CREDIT_BAKI'
                   ? 'border-amber-600 bg-amber-50 text-amber-900 shadow-xs ring-2 ring-amber-500/20'
                   : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
               }`}
             >
-              <UserMinus className="h-4 w-4 text-amber-600" />
+              <UserMinus className="h-5 w-5 text-amber-600" />
               <span>Baki (Due)</span>
             </button>
           </div>
@@ -324,7 +320,7 @@ export function CheckoutModal({
 
         {/* Modal Dynamic Body */}
         <div className="p-6 space-y-4">
-          {/* Customer Selection Block (Always available, mandatory for Baki) */}
+          {/* Customer Selection Block */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs">
               <label htmlFor="customerSelect" className="font-semibold text-slate-800">
@@ -502,48 +498,7 @@ export function CheckoutModal({
             </form>
           )}
 
-          {/* 3. BKASH HOSTED GATEWAY CONTENT */}
-          {method === 'BKASH' && (
-            <div className="space-y-4">
-              <div className="rounded-xl border border-pink-200 bg-pink-50/70 p-4 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#E2136E] text-white">
-                    <Smartphone className="h-3.5 w-3.5" />
-                    bKash Payment Gateway
-                  </div>
-                  <span className="text-xs font-semibold text-slate-500">Official Checkout</span>
-                </div>
-                <p className="text-xs text-slate-700 leading-relaxed">
-                  You will be redirected to the secure official <span className="font-bold text-[#E2136E]">bKash Payment Gateway</span> to authorize payment for <span className="font-bold">৳{total.toLocaleString()}</span>.
-                </p>
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-500 pt-1">
-                  <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-                  <span>Customer enters Account, OTP, and PIN on the hosted gateway page.</span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleRedirectGateway('BKASH')}
-                disabled={isCreatingSale || isRedirecting}
-                className="w-full py-3 rounded-xl bg-[#E2136E] text-white text-sm font-bold hover:bg-[#c2105e] transition flex items-center justify-center gap-2 shadow-xs disabled:opacity-50"
-              >
-                {isRedirecting || isCreatingSale ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Redirecting to bKash Gateway...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Continue to bKash</span>
-                    <ExternalLink className="h-4 w-4" />
-                  </>
-                )}
-              </button>
-            </div>
-          )}
-
-          {/* 4. SSLCOMMERZ HOSTED GATEWAY CONTENT */}
+          {/* 3. OFFICIAL SSLCOMMERZ GATEWAY CONTENT */}
           {method === 'CARD' && (
             <div className="space-y-4">
               <div className="rounded-xl border border-indigo-200 bg-indigo-50/70 p-4 space-y-2.5">
@@ -555,28 +510,34 @@ export function CheckoutModal({
                   <span className="text-xs font-semibold text-slate-500">Official Checkout</span>
                 </div>
                 <p className="text-xs text-slate-700 leading-relaxed">
-                  You will be redirected to the official <span className="font-bold text-indigo-900">SSLCommerz Hosted Gateway</span> to pay <span className="font-bold">৳{total.toLocaleString()}</span> via Debit/Credit Cards (Visa, Mastercard, Amex), Mobile Banking (Nagad, Rocket, Upay), or Internet Banking.
+                  Clicking continue will redirect you to the official secure <span className="font-bold text-indigo-950">SSLCommerz Payment Gateway</span> (sandbox.sslcommerz.com) to pay <span className="font-bold text-slate-900">৳{total.toLocaleString()}</span>.
                 </p>
+                <div className="rounded-lg bg-white/80 p-2.5 border border-indigo-100 text-[11px] text-slate-600 space-y-1">
+                  <p className="font-semibold text-indigo-900">Supported payment methods on official page:</p>
+                  <p>&bull; Debit / Credit Cards (Visa, Mastercard, Amex, UnionPay)</p>
+                  <p>&bull; Mobile Banking (bKash, Nagad, Rocket, Upay, Tap)</p>
+                  <p>&bull; Internet Banking (City Bank, BRAC, DBBL, Islami Bank, etc.)</p>
+                </div>
                 <div className="flex items-center gap-1.5 text-[11px] text-slate-500 pt-1">
                   <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-                  <span>3D Secure verification & 256-bit encrypted bank checkout.</span>
+                  <span>After payment, SSLCommerz will return here and save the transaction ID.</span>
                 </div>
               </div>
 
               <button
                 type="button"
-                onClick={() => handleRedirectGateway('SSLCOMMERZ')}
-                disabled={isCreatingSale || isRedirecting}
-                className="w-full py-3 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 transition flex items-center justify-center gap-2 shadow-xs disabled:opacity-50"
+                onClick={handleSslCheckout}
+                disabled={isCreatingSale || isRedirecting || isInitiatingPayment}
+                className="w-full py-3.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 transition flex items-center justify-center gap-2 shadow-xs disabled:opacity-50"
               >
-                {isRedirecting || isCreatingSale ? (
+                {isRedirecting || isCreatingSale || isInitiatingPayment ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Redirecting to SSLCommerz...</span>
+                    <span>Connecting to sandbox.sslcommerz.com...</span>
                   </>
                 ) : (
                   <>
-                    <span>Continue to SSLCommerz</span>
+                    <span>Continue to SSLCommerz Official Page</span>
                     <ExternalLink className="h-4 w-4" />
                   </>
                 )}

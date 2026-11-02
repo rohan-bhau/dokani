@@ -9,6 +9,8 @@ export interface PaymentConfirmedEvent {
   invoiceId?: string | null;
   amount: number;
   provider: string;
+  reference?: string;
+  timestamp?: string;
 }
 
 interface UseSocketOptions {

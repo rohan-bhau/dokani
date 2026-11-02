@@ -15,10 +15,11 @@ import {
   Store,
   AlertCircle,
   ArrowRight,
+  ArrowLeft,
   Lock,
   Smartphone,
-  ArrowLeft,
-  Building2,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 function PublicPaymentContent() {
@@ -34,9 +35,10 @@ function PublicPaymentContent() {
   const [completePayment, { isLoading: isSubmitting }] =
     useCompleteSimulatedPaymentMutation();
 
-  const [selectedMethod, setSelectedMethod] = useState<'BKASH' | 'SSLCOMMERZ'>('BKASH');
+  const [selectedMethod, setSelectedMethod] = useState<'SSLCOMMERZ'>('SSLCOMMERZ');
   const [step, setStep] = useState<'SELECTION' | 'GATEWAY' | 'OTP' | 'SUCCESS'>('SELECTION');
   const [sslTab, setSslTab] = useState<'CARDS' | 'MOBILE' | 'NET_BANKING'>('CARDS');
+  const [isSummaryExpanded, setIsSummaryExpanded] = useState(true);
 
   // Input states
   const [accountNumber, setAccountNumber] = useState('01711111111');
@@ -50,13 +52,9 @@ function PublicPaymentContent() {
     provider: string;
   } | null>(null);
 
-  // Automatically select provider & step from query param if redirected from checkout
   useEffect(() => {
-    if (providerParam === 'BKASH') {
-      setSelectedMethod('BKASH');
-      setStep('GATEWAY');
-    } else if (providerParam === 'SSLCOMMERZ') {
-      setSelectedMethod('SSLCOMMERZ');
+    setSelectedMethod('SSLCOMMERZ');
+    if (providerParam) {
       setStep('GATEWAY');
     }
   }, [providerParam]);
@@ -82,7 +80,7 @@ function PublicPaymentContent() {
           </div>
           <h1 className="text-xl font-bold text-slate-900 mb-2">Invoice Not Found</h1>
           <p className="text-xs text-slate-600 mb-6">
-            This payment link is invalid, expired, or has already been settled.
+            This checkout session has expired, is invalid, or has already been paid.
           </p>
           <div className="flex gap-2">
             <button
@@ -96,7 +94,7 @@ function PublicPaymentContent() {
               href="/pos"
               className="flex-1 px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 rounded-xl hover:bg-slate-200 transition text-center"
             >
-              Go to POS
+              Return to POS
             </Link>
           </div>
         </div>
@@ -115,12 +113,6 @@ function PublicPaymentContent() {
   const handleProceedToOtp = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
-    if (selectedMethod === 'BKASH') {
-      if (!/^01[3-9]\d{8}$/.test(accountNumber.trim())) {
-        setErrorMessage('Enter a valid 11-digit Bangladeshi mobile number.');
-        return;
-      }
-    }
     setStep('OTP');
   };
 
@@ -130,11 +122,6 @@ function PublicPaymentContent() {
 
     if (otp.trim().length !== 6 && otp.trim() !== '123456') {
       setErrorMessage('Please enter the 6-digit verification code (demo: 123456).');
-      return;
-    }
-
-    if (selectedMethod === 'BKASH' && pin.trim().length !== 5) {
-      setErrorMessage('Please enter your 5-digit confidential bKash PIN (demo: 12345).');
       return;
     }
 
@@ -168,22 +155,35 @@ function PublicPaymentContent() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col justify-between text-slate-800 font-sans">
-      {/* Top Header */}
+      {/* Top Navbar */}
       <header className="bg-white border-b border-slate-200 py-3.5 px-4 shadow-xs">
         <div className="max-w-xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Store className="w-5 h-5 text-emerald-600" />
-            <span className="font-bold text-slate-900 tracking-tight text-sm">Dokani Hosted Gateway</span>
+            <span className="font-bold text-slate-900 tracking-tight text-sm">Dokani Hosted Checkout</span>
           </div>
-          <div className="flex items-center space-x-1 text-xs text-slate-500">
+          <div className="flex items-center space-x-1.5 text-xs text-slate-500">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
             <span>256-bit SSL Encrypted</span>
           </div>
         </div>
       </header>
 
-      {/* Main Content Area */}
+      {/* Main Container */}
       <main className="flex-1 max-w-xl w-full mx-auto p-4 sm:p-6 my-auto">
+        {step !== 'SUCCESS' && !isAlreadyPaid && (
+          <div className="mb-3 flex items-center justify-between">
+            <Link
+              href="/pos?payment_status=cancelled"
+              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 font-medium transition"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Cancel and return to store</span>
+            </Link>
+            <span className="text-[11px] text-slate-400 font-mono">Invoice #{invoice.invoiceNumber}</span>
+          </div>
+        )}
+
         {step === 'SUCCESS' || isAlreadyPaid ? (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="p-8 text-center bg-gradient-to-b from-emerald-50 to-white border-b border-slate-100">
@@ -234,7 +234,7 @@ function PublicPaymentContent() {
                   Print Receipt
                 </button>
                 <Link
-                  href="/pos"
+                  href={`/pos?payment_status=success&invoice_id=${invoice.id}`}
                   className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 bg-white rounded-xl text-xs font-semibold hover:bg-slate-50 transition text-center"
                 >
                   Return to POS Terminal
@@ -244,13 +244,13 @@ function PublicPaymentContent() {
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            {/* Shop & Bill Header */}
+            {/* Merchant & Total Header */}
             <div className="p-5 border-b border-slate-200 bg-slate-50">
               <div className="flex items-start justify-between">
                 <div>
                   <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 mb-1.5">
                     <ShieldCheck className="w-3.5 h-3.5" />
-                    Verified Merchant
+                    Verified Dokan Merchant
                   </div>
                   <h1 className="text-base font-bold text-slate-900">{invoice.tenant.name}</h1>
                   {invoice.tenant.phone && (
@@ -259,80 +259,60 @@ function PublicPaymentContent() {
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] text-slate-500 uppercase tracking-wider block">
-                    Invoice
+                    Total Due
                   </span>
-                  <span className="font-mono font-semibold text-slate-800 text-xs">
-                    #{invoice.invoiceNumber}
+                  <span className="text-2xl font-black text-slate-900">
+                    ৳{formatBdt(invoice.dueTotal > 0 ? invoice.dueTotal : invoice.total)}
                   </span>
                 </div>
               </div>
 
-              <div className="mt-3 pt-3 border-t border-slate-200 flex items-center justify-between">
-                <span className="text-xs text-slate-600 font-medium">Total Payable</span>
-                <span className="text-xl font-black text-slate-900">
-                  ৳{formatBdt(invoice.dueTotal > 0 ? invoice.dueTotal : invoice.total)}
-                </span>
+              {/* Collapsible Order Breakdown */}
+              <div className="mt-3 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsSummaryExpanded((prev) => !prev)}
+                  className="w-full flex items-center justify-between text-xs font-semibold text-slate-700 hover:text-slate-900"
+                >
+                  <span>Order Items ({invoice.items?.length || 0})</span>
+                  {isSummaryExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+
+                {isSummaryExpanded && invoice.items && invoice.items.length > 0 && (
+                  <div className="mt-2 divide-y divide-slate-100 max-h-36 overflow-y-auto pr-1">
+                    {invoice.items.map((item: any) => (
+                      <div key={item.id} className="py-1.5 flex items-center justify-between text-xs">
+                        <div>
+                          <p className="font-medium text-slate-800">{item.productName || 'Item'}</p>
+                          <p className="text-[10px] text-slate-500">
+                            {item.quantity} × ৳{formatBdt(item.unitPrice)}
+                          </p>
+                        </div>
+                        <span className="font-semibold text-slate-900 tabular-nums">
+                          ৳{formatBdt(item.lineTotal)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
             {/* STEP 1: PAYMENT METHOD SELECTION */}
             {step === 'SELECTION' && (
               <div className="p-6 space-y-4">
-                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Select Payment Method</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMethod('BKASH')}
-                    className={`p-3.5 rounded-xl border-2 text-left transition flex items-center justify-between ${
-                      selectedMethod === 'BKASH'
-                        ? 'border-[#E2136E] bg-pink-50/50'
-                        : 'border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <Smartphone className="w-5 h-5 text-[#E2136E]" />
-                      <div>
-                        <span className="block text-xs font-bold text-[#E2136E]">bKash Checkout</span>
-                        <span className="text-[10px] text-slate-500">Instant mobile wallet</span>
-                      </div>
+                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Payment Gateway</h2>
+                <div className="p-4 rounded-xl border-2 border-indigo-600 bg-indigo-50/50 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <CreditCard className="w-6 h-6 text-indigo-600" />
+                    <div>
+                      <span className="block text-sm font-bold text-indigo-950">SSLCommerz Hosted Checkout</span>
+                      <span className="text-xs text-slate-600">Cards (Visa/Mastercard), Mobile Banking & Internet Banking</span>
                     </div>
-                    <div
-                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                        selectedMethod === 'BKASH'
-                          ? 'border-[#E2136E] bg-[#E2136E]'
-                          : 'border-slate-300'
-                      }`}
-                    >
-                      {selectedMethod === 'BKASH' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMethod('SSLCOMMERZ')}
-                    className={`p-3.5 rounded-xl border-2 text-left transition flex items-center justify-between ${
-                      selectedMethod === 'SSLCOMMERZ'
-                        ? 'border-indigo-600 bg-indigo-50/50'
-                        : 'border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <CreditCard className="w-5 h-5 text-indigo-600" />
-                      <div>
-                        <span className="block text-xs font-bold text-indigo-950">SSLCommerz</span>
-                        <span className="text-[10px] text-slate-500">Cards & Internet banking</span>
-                      </div>
-                    </div>
-                    <div
-                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                        selectedMethod === 'SSLCOMMERZ'
-                          ? 'border-indigo-600 bg-indigo-600'
-                          : 'border-slate-300'
-                      }`}
-                    >
-                      {selectedMethod === 'SSLCOMMERZ' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                    </div>
-                  </button>
+                  </div>
+                  <div className="w-4 h-4 rounded-full border border-indigo-600 bg-indigo-600 flex items-center justify-center">
+                    <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                  </div>
                 </div>
 
                 <button
@@ -340,7 +320,7 @@ function PublicPaymentContent() {
                   onClick={handleStartGateway}
                   className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs transition flex items-center justify-center gap-2"
                 >
-                  <span>Proceed to Payment Gateway</span>
+                  <span>Proceed to SSLCommerz Checkout</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -349,80 +329,17 @@ function PublicPaymentContent() {
             {/* STEP 2: OFFICIAL GATEWAY SCREEN */}
             {step === 'GATEWAY' && (
               <div className="p-6">
-                {selectedMethod === 'BKASH' ? (
-                  <form onSubmit={handleProceedToOtp} className="space-y-4">
-                    {/* bKash Official Banner */}
-                    <div className="bg-[#E2136E] text-white p-4 rounded-xl text-center space-y-1">
-                      <p className="text-[11px] tracking-wider uppercase font-semibold opacity-90">
-                        bKash Official Payment Gateway
-                      </p>
-                      <p className="text-xl font-black">
-                        ৳{formatBdt(invoice.dueTotal > 0 ? invoice.dueTotal : invoice.total)}
-                      </p>
-                      <p className="text-[11px] opacity-80">Merchant: {invoice.tenant.name}</p>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-xs font-bold text-slate-800">
-                          Your bKash Account Number
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setAccountNumber('01711111111')}
-                          className="text-[11px] font-semibold text-[#E2136E] hover:underline"
-                        >
-                          ⚡ Use Demo: 01711111111
-                        </button>
-                      </div>
-                      <input
-                        type="text"
-                        maxLength={11}
-                        placeholder="01XXXXXXXXX"
-                        value={accountNumber}
-                        onChange={(e) => setAccountNumber(e.target.value)}
-                        required
-                        className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-pink-500 font-mono"
-                      />
-                      <p className="text-[11px] text-slate-500 mt-1">
-                        Enter any valid 11-digit Bangladeshi mobile number
-                      </p>
-                    </div>
-
-                    {errorMessage && (
-                      <p className="text-xs text-rose-600 bg-rose-50 p-2.5 rounded-lg border border-rose-200">
-                        {errorMessage}
-                      </p>
-                    )}
-
-                    <div className="flex gap-2 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => setStep('SELECTION')}
-                        className="w-1/3 py-2.5 border border-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-50 text-slate-700"
-                      >
-                        Change Method
-                      </button>
-                      <button
-                        type="submit"
-                        className="flex-1 py-2.5 bg-[#E2136E] hover:bg-[#c2105e] text-white rounded-xl text-xs font-bold transition shadow-xs"
-                      >
-                        Confirm & Proceed
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <form onSubmit={handleProceedToOtp} className="space-y-4">
-                    {/* SSLCommerz Official Banner */}
-                    <div className="bg-indigo-950 text-white p-4 rounded-xl text-center space-y-1">
-                      <p className="text-[11px] tracking-wider uppercase font-semibold text-indigo-200">
-                        SSLCommerz Hosted Checkout
-                      </p>
-                      <p className="text-xl font-black">
-                        ৳{formatBdt(invoice.dueTotal > 0 ? invoice.dueTotal : invoice.total)}
-                      </p>
-                      <p className="text-[11px] text-indigo-300">Merchant: {invoice.tenant.name}</p>
-                    </div>
+                <form onSubmit={handleProceedToOtp} className="space-y-4">
+                  {/* SSLCommerz Official Banner */}
+                  <div className="bg-indigo-950 text-white p-4 rounded-xl text-center space-y-1">
+                    <p className="text-[11px] tracking-wider uppercase font-semibold text-indigo-200">
+                      SSLCommerz Hosted Checkout
+                    </p>
+                    <p className="text-xl font-black">
+                      ৳{formatBdt(invoice.dueTotal > 0 ? invoice.dueTotal : invoice.total)}
+                    </p>
+                    <p className="text-[11px] text-indigo-300">Merchant: {invoice.tenant.name}</p>
+                  </div>
 
                     {/* SSLCommerz Tabs */}
                     <div className="flex border-b border-slate-200 text-xs font-semibold">
@@ -574,7 +491,6 @@ function PublicPaymentContent() {
                       </button>
                     </div>
                   </form>
-                )}
               </div>
             )}
 
@@ -586,7 +502,7 @@ function PublicPaymentContent() {
                     <Lock className="w-5 h-5" />
                   </div>
                   <h3 className="text-sm font-bold text-slate-900">
-                    {selectedMethod === 'BKASH' ? 'bKash PIN & Verification' : '3D Secure Authorization'}
+                    3D Secure Authorization
                   </h3>
                   <p className="text-xs text-slate-500">
                     Enter the test verification code to authorize payment.
@@ -616,32 +532,6 @@ function PublicPaymentContent() {
                     className="w-full text-center tracking-widest text-lg font-mono font-bold px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900"
                   />
                 </div>
-
-                {selectedMethod === 'BKASH' && (
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-bold text-slate-800">
-                        5-Digit bKash PIN
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setPin('12345')}
-                        className="text-[11px] font-semibold text-[#E2136E] hover:underline"
-                      >
-                        ⚡ Fill Demo: 12345
-                      </button>
-                    </div>
-                    <input
-                      type="password"
-                      maxLength={5}
-                      placeholder="•••••"
-                      value={pin}
-                      onChange={(e) => setPin(e.target.value)}
-                      required
-                      className="w-full text-center tracking-widest text-lg px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-pink-500 font-mono"
-                    />
-                  </div>
-                )}
 
                 {errorMessage && (
                   <p className="text-xs text-rose-600 bg-rose-50 p-2.5 rounded-lg border border-rose-200">

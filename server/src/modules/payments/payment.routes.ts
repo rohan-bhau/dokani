@@ -27,6 +27,15 @@ paymentRouter.get(
   paymentController.getStatus
 );
 
+// Dedicated SSLCommerz Gateway Callbacks (both POST and GET supported)
+paymentRouter.post('/sslcommerz/success', paymentController.handleSslSuccess);
+paymentRouter.get('/sslcommerz/success', paymentController.handleSslSuccess);
+paymentRouter.post('/sslcommerz/fail', paymentController.handleSslFail);
+paymentRouter.get('/sslcommerz/fail', paymentController.handleSslFail);
+paymentRouter.post('/sslcommerz/cancel', paymentController.handleSslCancel);
+paymentRouter.get('/sslcommerz/cancel', paymentController.handleSslCancel);
+paymentRouter.post('/sslcommerz/ipn', paymentController.handleSslIpn);
+
 // Public Gateway Callbacks & IPNs
 paymentRouter.post('/:provider/callback', paymentController.handleCallback);
 paymentRouter.get('/:provider/callback', paymentController.handleCallback);
