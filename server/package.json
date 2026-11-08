@@ -11,7 +11,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx src/scripts/seed-demo-data.ts",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand && tsx src/scripts/seed-demo-data.ts"
   },
   "dependencies": {
     "@dokani/shared": "workspace:*",

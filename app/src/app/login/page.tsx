@@ -32,7 +32,7 @@ export default function LoginPage() {
           refreshToken: payload.tokens.refreshToken,
         })
       );
-      router.push('/products');
+      router.push('/dashboard');
       router.refresh();
     } catch (err: unknown) {
       const error = err as { data?: { message?: string; error?: { message?: string } } };

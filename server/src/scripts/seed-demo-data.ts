@@ -2,7 +2,7 @@ import { prisma } from '../config/prisma.js';
 import { hashPassword } from '../modules/auth/auth.password.js';
 import crypto from 'node:crypto';
 
-async function main() {
+export async function seedDemoData(): Promise<void> {
   console.log('Seeding demo data for Dokani...');
 
   const passwordHash = await hashPassword('Password123!');
@@ -1078,11 +1078,13 @@ async function main() {
   console.log('Seeding completed successfully!');
 }
 
-main()
-  .catch((e) => {
-    console.error('Seed error:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+if (process.argv[1]?.includes('seed-demo-data')) {
+  seedDemoData()
+    .catch((e) => {
+      console.error('Seed error:', e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}
