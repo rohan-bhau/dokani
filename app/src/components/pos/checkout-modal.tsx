@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   X,
   Loader2,
@@ -58,6 +58,17 @@ export function CheckoutModal({
   const selectedCustomer = useMemo(() => {
     return customers.find((c) => c.id === selectedCustomerId) || null;
   }, [customers, selectedCustomerId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isCreatingSale && !isRedirecting && !isInitiatingPayment) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose, isCreatingSale, isRedirecting, isInitiatingPayment]);
 
   if (!isOpen) return null;
 
@@ -208,6 +219,7 @@ export function CheckoutModal({
         customerId: selectedCustomerId?.trim() || undefined,
         customerName: selectedCustomer?.name || 'Walk-in Customer',
         customerPhone: selectedCustomer?.phone || '01711111111',
+        callbackUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
       }).unwrap();
 
       if (initRes?.data?.redirectUrl) {
@@ -533,11 +545,11 @@ export function CheckoutModal({
                 {isRedirecting || isCreatingSale || isInitiatingPayment ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Connecting to sandbox.sslcommerz.com...</span>
+                    <span>Connecting to SSLCommerz...</span>
                   </>
                 ) : (
                   <>
-                    <span>Continue to SSLCommerz Official Page</span>
+                    <span>Continue to SSLCommerz</span>
                     <ExternalLink className="h-4 w-4" />
                   </>
                 )}

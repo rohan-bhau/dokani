@@ -66,15 +66,18 @@ function PosContent() {
   const [completedInvoice, setCompletedInvoice] = useState<InvoiceResponse | null>(null);
   const [gatewaySuccessData, setGatewaySuccessData] = useState<GatewaySuccessData | null>(null);
   const [paymentBanner, setPaymentBanner] = useState<{ type: 'error' | 'warning'; message: string } | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Products query
-  const { data: productsData, isLoading } = useGetProductsQuery({
-    page: 1,
-    limit: 100,
-    q: searchTerm.trim() || undefined,
-  });
+  const showToast = (msg: string) => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToastMessage(msg);
+    toastTimeoutRef.current = setTimeout(() => {
+      setToastMessage(null);
+    }, 2500);
+  };
 
   // Handle return from official SSLCommerz hosted payment gateway
   useEffect(() => {
@@ -141,50 +144,35 @@ function PosContent() {
     },
   });
 
+  // Products query (loaded in memory for zero-latency instant POS responsiveness)
+  const { data: productsData, isLoading } = useGetProductsQuery({
+    page: 1,
+    limit: 100,
+  });
+
   const products = productsData?.data.products ?? [];
 
-  // Barcode scanner integration: instantly adds product to cart on hardware scan
-  useBarcodeScanner({
-    onScan: (barcode) => {
-      const matched = products.find((p) => p.barcode === barcode || p.sku === barcode);
-      if (matched) {
-        addToCart(matched);
-      }
-    },
-  });
-
-  // Global Keyboard shortcuts: F1 (search), F8 (hold cart), F9 (checkout)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F1') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      } else if (e.key === 'F8') {
-        e.preventDefault();
-        if (cart.length > 0) holdCart();
-      } else if (e.key === 'F9') {
-        e.preventDefault();
-        if (cart.length > 0) setIsCheckoutOpen(true);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  });
-
   const addToCart = (product: ProductItem) => {
-    if (product.stock <= 0) return;
+    if (product.stock <= 0) {
+      showToast(`${product.name} is out of stock.`);
+      return;
+    }
 
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
       if (existing) {
-        if (existing.quantity >= product.stock) return prev;
+        if (existing.quantity >= product.stock) {
+          showToast(`Cannot add more. Stock limit (${product.stock}) reached.`);
+          return prev;
+        }
+        showToast(`Updated ${product.name} quantity to ${existing.quantity + 1}`);
         return prev.map((item) =>
           item.product.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
+      showToast(`Added ${product.name} to cart.`);
       return [...prev, { product, quantity: 1, discount: 0 }];
     });
   };
@@ -216,7 +204,10 @@ function PosContent() {
   };
 
   const holdCart = () => {
-    if (cart.length === 0) return;
+    if (cart.length === 0) {
+      showToast('Cart is empty. Add products before holding.');
+      return;
+    }
     const order: HeldOrder = {
       id: crypto.randomUUID(),
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -224,13 +215,144 @@ function PosContent() {
     };
     setHeldOrders((prev) => [order, ...prev]);
     clearCart();
+    showToast(`Order held (${order.items.length} items). Access via "Held" button.`);
   };
 
   const resumeHeldOrder = (order: HeldOrder) => {
     setCart(order.items);
     setHeldOrders((prev) => prev.filter((o) => o.id !== order.id));
     setShowHeldOrders(false);
+    showToast(`Restored order from ${order.timestamp}.`);
   };
+
+  // Barcode scanner integration: instantly adds product to cart on hardware scan
+  useBarcodeScanner({
+    onScan: (barcode) => {
+      const clean = barcode.trim().toLowerCase();
+      const matched = products.find(
+        (p) =>
+          p.barcode?.trim().toLowerCase() === clean ||
+          p.sku?.trim().toLowerCase() === clean
+      );
+      if (matched) {
+        addToCart(matched);
+      } else {
+        showToast(`Scanned barcode "${barcode}" not found in store inventory.`);
+      }
+    },
+  });
+
+  // Client-side search and category filtering (instant zero-latency)
+  const filteredProducts = useMemo(() => {
+    let list = products;
+    if (selectedCategory !== 'ALL') {
+      list = list.filter((p) => (p as any).category?.name?.toUpperCase() === selectedCategory);
+    }
+    const q = searchTerm.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          (p.nameBn && p.nameBn.toLowerCase().includes(q)) ||
+          p.sku.toLowerCase().includes(q) ||
+          (p.barcode && p.barcode.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }, [products, selectedCategory, searchTerm]);
+
+  // Handle Enter key inside search box to immediately add product to cart
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const q = searchTerm.trim().toLowerCase();
+      if (!q) return;
+
+      // 1. Exact match by barcode or SKU
+      const exactMatch = products.find(
+        (p) =>
+          p.barcode?.trim().toLowerCase() === q ||
+          p.sku.trim().toLowerCase() === q
+      );
+
+      if (exactMatch) {
+        addToCart(exactMatch);
+        setSearchTerm('');
+        return;
+      }
+
+      // 2. First product in filtered list
+      if (filteredProducts.length > 0) {
+        addToCart(filteredProducts[0]);
+        setSearchTerm('');
+        return;
+      }
+
+      showToast(`No product found matching "${searchTerm.trim()}".`);
+    }
+  };
+
+  // Global Keyboard shortcuts:
+  // - Focus Search: F1 or Ctrl+K / Cmd+K or '/' (when not typing in an input)
+  // - Hold Cart: F8 or Ctrl+H
+  // - Pay Now / Checkout: F9 or Ctrl+Enter
+  // - Escape: Close checkout / clear focus
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInput =
+        activeEl?.tagName === 'INPUT' ||
+        activeEl?.tagName === 'TEXTAREA' ||
+        (activeEl as HTMLElement)?.isContentEditable;
+
+      // Search focus shortcut
+      if (
+        e.key === 'F1' ||
+        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') ||
+        (e.key === '/' && !isInput)
+      ) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+        return;
+      }
+
+      // Hold cart shortcut
+      if (e.key === 'F8' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'h')) {
+        e.preventDefault();
+        holdCart();
+        return;
+      }
+
+      // Checkout shortcut
+      if (
+        e.key === 'F9' ||
+        ((e.ctrlKey || e.metaKey) && e.key === 'Enter')
+      ) {
+        e.preventDefault();
+        if (cart.length > 0) {
+          setIsCheckoutOpen(true);
+        } else {
+          showToast('Cart is empty. Select products before checkout.');
+        }
+        return;
+      }
+
+      // Escape key to dismiss modals
+      if (e.key === 'Escape') {
+        if (isCheckoutOpen) {
+          setIsCheckoutOpen(false);
+        } else if (showHeldOrders) {
+          setShowHeldOrders(false);
+        } else {
+          searchInputRef.current?.blur();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [cart, isCheckoutOpen, showHeldOrders, products, filteredProducts, searchTerm]);
 
   // Calculations
   const { subtotal, vatTotal, grandTotal } = useMemo(() => {
@@ -257,13 +379,17 @@ function PosContent() {
     return ['ALL', ...Array.from(list)];
   }, [products]);
 
-  const filteredProducts = useMemo(() => {
-    if (selectedCategory === 'ALL') return products;
-    return products.filter((p) => (p as any).category?.name?.toUpperCase() === selectedCategory);
-  }, [products, selectedCategory]);
-
   return (
     <AuthGuard>
+      {toastMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed top-16 left-1/2 -translate-x-1/2 z-50 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-xl border border-slate-700 pointer-events-none transition-all animate-in fade-in slide-in-from-top-2"
+        >
+          {toastMessage}
+        </div>
+      )}
       <div className="mx-auto max-w-7xl w-full px-4 py-4 sm:px-6 md:px-8 flex-1 flex flex-col">
         {paymentBanner && (
           <div
@@ -300,7 +426,8 @@ function PosContent() {
                 type="search"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="[F1] Scan barcode or search product..."
+                onKeyDown={handleSearchKeyDown}
+                placeholder="Scan barcode or type & press Enter... (F1 / Ctrl+K)"
                 className="w-full rounded border border-border bg-surface py-2 pl-9 pr-3 text-xs text-slate-900 placeholder-slate-400 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               />
             </div>
@@ -573,9 +700,18 @@ function PosContent() {
           <div className="grid grid-cols-2 gap-2 pt-1">
             <button
               type="button"
-              disabled={cart.length === 0}
-              onClick={holdCart}
-              className="flex items-center justify-center gap-1.5 rounded border border-border bg-white py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:opacity-40"
+              onClick={() => {
+                if (cart.length === 0) {
+                  showToast('Cart is empty. Add products before holding.');
+                } else {
+                  holdCart();
+                }
+              }}
+              className={`flex items-center justify-center gap-1.5 rounded border py-2.5 text-xs font-semibold transition ${
+                cart.length === 0
+                  ? 'border-slate-200 bg-slate-50 text-slate-400 hover:bg-slate-100 cursor-pointer'
+                  : 'border-border bg-white text-slate-700 hover:bg-slate-100 shadow-xs'
+              }`}
             >
               <PauseCircle className="h-4 w-4" />
               <span>Hold Cart [F8]</span>
@@ -583,9 +719,18 @@ function PosContent() {
 
             <button
               type="button"
-              disabled={cart.length === 0}
-              onClick={() => setIsCheckoutOpen(true)}
-              className="flex items-center justify-center gap-1.5 rounded bg-brand py-2 text-xs font-bold text-white shadow hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:opacity-40"
+              onClick={() => {
+                if (cart.length === 0) {
+                  showToast('Cart is empty. Add products before checkout.');
+                } else {
+                  setIsCheckoutOpen(true);
+                }
+              }}
+              className={`flex items-center justify-center gap-1.5 rounded py-2.5 text-xs font-bold text-white shadow-sm transition ${
+                cart.length === 0
+                  ? 'bg-brand/60 cursor-pointer'
+                  : 'bg-brand hover:bg-brand-hover active:scale-[0.99]'
+              }`}
             >
               <CreditCard className="h-4 w-4" />
               <span>Pay Now [F9]</span>

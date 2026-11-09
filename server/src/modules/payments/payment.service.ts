@@ -1,5 +1,6 @@
 import { PaymentRepository } from './payment.repository.js';
 import { prisma } from '../../config/prisma.js';
+import { env } from '../../config/env.js';
 import { BkashPaymentProvider } from './providers/bkash.provider.js';
 import { SslCommerzPaymentProvider } from './providers/sslcommerz.provider.js';
 import type { PaymentProvider } from './payment.interface.js';
@@ -61,9 +62,13 @@ export class PaymentService {
     if (input.provider === 'SSLCOMMERZ' && !customerName) {
       throw new BadRequestError('Customer name is required for SSLCommerz payment initiation.');
     }
-    if (!input.callbackUrl) {
-      throw new BadRequestError('Callback URL is required for payment initiation.');
-    }
+
+    const serverUrl = env.SERVER_URL;
+    const callbackUrl =
+      input.callbackUrl ||
+      (input.provider === 'SSLCOMMERZ'
+        ? `${serverUrl}/api/v1/payments/sslcommerz/success`
+        : `${serverUrl}/api/v1/payments/${input.provider.toLowerCase()}/callback`);
 
     try {
       const initiation = await provider.createPayment({
@@ -75,7 +80,7 @@ export class PaymentService {
         customerPhone,
         customerEmail,
         customerAddress,
-        callbackUrl: input.callbackUrl,
+        callbackUrl,
       });
 
       await this.paymentRepo.updatePaymentProviderRef(pendingPayment.id, initiation.providerRef);

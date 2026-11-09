@@ -10,8 +10,8 @@ interface UseBarcodeScannerOptions {
 
 export function useBarcodeScanner({
   onScan,
-  minChars = 4,
-  maxIntervalMs = 50,
+  minChars = 3,
+  maxIntervalMs = 80,
 }: UseBarcodeScannerOptions) {
   const bufferRef = useRef<string>('');
   const lastKeyTimeRef = useRef<number>(0);

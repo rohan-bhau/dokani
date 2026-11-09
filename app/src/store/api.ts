@@ -5,6 +5,7 @@ import {
   type FetchArgs,
   type FetchBaseQueryError,
 } from '@reduxjs/toolkit/query/react';
+import { setCredentials, logout } from './authSlice';
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: '/api/v1',
@@ -24,18 +25,49 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
   api,
   extraOptions
 ) => {
-  const result = await rawBaseQuery(args, api, extraOptions);
+  let result = await rawBaseQuery(args, api, extraOptions);
 
   if (result.error && result.error.status === 401) {
-    if (
-      typeof window !== 'undefined' &&
-      !window.location.pathname.startsWith('/login') &&
-      !window.location.pathname.startsWith('/register')
-    ) {
-      localStorage.removeItem('dokani_access_token');
-      localStorage.removeItem('dokani_refresh_token');
-      localStorage.removeItem('dokani_user');
-      window.location.href = '/login';
+    if (typeof window !== 'undefined') {
+      const refreshToken = localStorage.getItem('dokani_refresh_token');
+      if (refreshToken) {
+        const refreshResult = await rawBaseQuery(
+          {
+            url: '/auth/refresh',
+            method: 'POST',
+            body: { refreshToken },
+          },
+          api,
+          extraOptions
+        );
+
+        const responseData = refreshResult.data as {
+          success: boolean;
+          data?: { accessToken: string; refreshToken: string; user: any };
+        };
+
+        if (responseData?.success && responseData?.data?.accessToken) {
+          api.dispatch(
+            setCredentials({
+              user: responseData.data.user,
+              token: responseData.data.accessToken,
+              refreshToken: responseData.data.refreshToken,
+            })
+          );
+          // Retry the original request with the fresh token
+          result = await rawBaseQuery(args, api, extraOptions);
+          return result;
+        }
+      }
+
+      // If refresh token is missing or refresh request failed
+      if (
+        !window.location.pathname.startsWith('/login') &&
+        !window.location.pathname.startsWith('/register')
+      ) {
+        api.dispatch(logout());
+        window.location.href = '/login';
+      }
     }
   }
 

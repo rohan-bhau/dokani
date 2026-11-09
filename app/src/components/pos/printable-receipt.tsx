@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Printer, X } from 'lucide-react';
 import type { InvoiceResponse } from '@/store/salesApi';
 
@@ -14,6 +15,19 @@ export function PrintableReceipt({
   onClose,
   tenantName = 'Karim Store',
 }: PrintableReceiptProps) {
+  useEffect(() => {
+    if (!invoice) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'Enter') {
+        window.print();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [invoice, onClose]);
+
   if (!invoice) return null;
 
   const handlePrint = () => {

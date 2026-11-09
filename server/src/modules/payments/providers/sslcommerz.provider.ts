@@ -22,18 +22,27 @@ export class SslCommerzPaymentProvider implements PaymentProvider {
     const tranId = `TXN_${request.internalPaymentId}`;
     const amountInBdt = Number(request.amount);
     const sslcz = this.getClient();
-    const serverUrl = env.SERVER_URL || 'http://localhost:5000';
+    const serverUrl = env.SERVER_URL;
+    let returnOrigin = '';
+    if (request.callbackUrl) {
+      try {
+        returnOrigin = new URL(request.callbackUrl).origin;
+      } catch {
+        // Ignore malformed URL
+      }
+    }
 
-    const successUrl = `${serverUrl}/api/v1/payments/sslcommerz/success`;
-    const failUrl = `${serverUrl}/api/v1/payments/sslcommerz/fail`;
-    const cancelUrl = `${serverUrl}/api/v1/payments/sslcommerz/cancel`;
+    const originQuery = returnOrigin ? `?return_origin=${encodeURIComponent(returnOrigin)}` : '';
+    const successUrl = `${serverUrl}/api/v1/payments/sslcommerz/success${originQuery}`;
+    const failUrl = `${serverUrl}/api/v1/payments/sslcommerz/fail${originQuery}`;
+    const cancelUrl = `${serverUrl}/api/v1/payments/sslcommerz/cancel${originQuery}`;
     const ipnUrl = `${serverUrl}/api/v1/payments/sslcommerz/ipn`;
 
     const data = {
       total_amount: amountInBdt,
       currency: 'BDT',
       tran_id: tranId,
-      success_url: request.callbackUrl || successUrl,
+      success_url: successUrl,
       fail_url: failUrl,
       cancel_url: cancelUrl,
       ipn_url: ipnUrl,
