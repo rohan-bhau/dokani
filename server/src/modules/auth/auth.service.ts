@@ -22,6 +22,7 @@ export interface AuthResponse {
       id: string;
       name: string;
       slug: string;
+      logoUrl: string | null;
     };
     roles: string[];
     permissions: string[];
@@ -83,7 +84,7 @@ export class AuthService {
     await this.repo.createRefreshToken({
       userId: user.id,
       tokenHash: hashToken(refreshToken),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       ipAddress: metadata?.ip,
       userAgent: metadata?.userAgent,
     });
@@ -98,6 +99,7 @@ export class AuthService {
           id: tenant.id,
           name: tenant.name,
           slug: tenant.slug,
+          logoUrl: tenant.logoUrl,
         },
         roles,
         permissions,
@@ -134,7 +136,7 @@ export class AuthService {
     await this.repo.createRefreshToken({
       userId: user.id,
       tokenHash: hashToken(refreshToken),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       ipAddress: metadata?.ip,
       userAgent: metadata?.userAgent,
     });
@@ -149,6 +151,7 @@ export class AuthService {
           id: user.tenant.id,
           name: user.tenant.name,
           slug: user.tenant.slug,
+          logoUrl: user.tenant.logoUrl,
         },
         roles,
         permissions,
@@ -196,7 +199,7 @@ export class AuthService {
     await this.repo.createRefreshToken({
       userId: user.id,
       tokenHash: hashToken(newRefreshToken),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       ipAddress: metadata?.ip,
       userAgent: metadata?.userAgent,
     });
@@ -267,6 +270,7 @@ export class AuthService {
         id: user.tenant.id,
         name: user.tenant.name,
         slug: user.tenant.slug,
+        logoUrl: user.tenant.logoUrl,
       },
       roles,
       permissions,

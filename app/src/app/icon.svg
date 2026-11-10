@@ -1,0 +1,14 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="dokani-favicon-grad" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="12" fill="url(#dokani-favicon-grad)" />
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M12 11H24.5C32.232 11 38 16.768 38 24C38 31.232 32.232 37 24.5 37H12V11ZM16.5 15.5V32.5H24.5C29.7467 32.5 33.5 28.7467 33.5 24C33.5 19.2533 29.7467 15.5 24.5 15.5H16.5Z" fill="#FFFFFF" />
+  <rect x="19.5" y="23.5" width="2.5" height="6.5" rx="1.25" fill="#FFFFFF" fill-opacity="0.85" />
+  <rect x="23.5" y="20" width="2.5" height="10" rx="1.25" fill="#FFFFFF" fill-opacity="0.95" />
+  <rect x="27.5" y="17.5" width="2.5" height="12.5" rx="1.25" fill="#6EE7B7" />
+</svg>
+

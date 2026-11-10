@@ -15,7 +15,7 @@ export interface RefreshTokenPayload {
 
 export const signAccessToken = (payload: AccessTokenPayload): string => {
   return jwt.sign(payload, env.JWT_ACCESS_SECRET, {
-    expiresIn: '15m',
+    expiresIn: '30d',
   });
 };
 
@@ -25,7 +25,7 @@ export const verifyAccessToken = (token: string): AccessTokenPayload => {
 
 export const signRefreshToken = (payload: RefreshTokenPayload): string => {
   return jwt.sign(payload, env.JWT_REFRESH_SECRET, {
-    expiresIn: '7d',
+    expiresIn: '30d',
   });
 };
 

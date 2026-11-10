@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useDispatch } from 'react-redux';
-import { Store, Lock, Phone, AlertCircle, ArrowRight } from 'lucide-react';
+import { Lock, Phone, AlertCircle, ArrowRight } from 'lucide-react';
+import { DokaniLogo } from '@/components/dokani-logo';
 import { useLoginMutation } from '@/store/authApi';
 import { setCredentials } from '@/store/authSlice';
 import type { AppDispatch } from '@/store';
@@ -53,8 +54,8 @@ export default function LoginPage() {
     <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-6 rounded-xl border border-border bg-surface p-8 shadow-sm">
         <div className="text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-brand text-white shadow-sm">
-            <Store className="h-6 w-6" />
+          <div className="mx-auto flex justify-center">
+            <DokaniLogo size={48} />
           </div>
           <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900">
             Sign in to Dokani

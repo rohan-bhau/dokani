@@ -19,11 +19,15 @@ import {
 } from 'lucide-react';
 import { useGetProductsQuery, type ProductItem } from '@/store/productApi';
 import { useLazyGetSaleByIdQuery, type InvoiceResponse } from '@/store/salesApi';
+import { useGetSettingsQuery } from '@/store/settingsApi';
+import { useSelector } from 'react-redux';
+import type { RootState } from '@/store';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { useSocket } from '@/hooks/useSocket';
 import { CheckoutModal } from '@/components/pos/checkout-modal';
 import { PrintableReceipt } from '@/components/pos/printable-receipt';
 import { AuthGuard } from '@/components/auth-guard';
+import { DokaniLogo, ShopLogo } from '@/components/dokani-logo';
 
 interface CartItem {
   product: ProductItem;
@@ -50,6 +54,10 @@ function PosContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [triggerGetSale] = useLazyGetSaleByIdQuery();
+  const userTenant = useSelector((state: RootState) => state.auth.user?.tenant);
+  const { data: settingsData } = useGetSettingsQuery();
+  const shopName = settingsData?.data?.name || userTenant?.name || 'Dokani Store';
+  const shopLogoUrl = settingsData?.data?.logoUrl ?? null;
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
@@ -412,7 +420,7 @@ function PosContent() {
             </button>
           </div>
         )}
-        <div className="flex flex-1 flex-col gap-4 lg:flex-row h-full min-h-[calc(100vh-14rem)]">
+        <div className="flex flex-1 flex-col gap-4 lg:flex-row lg:items-start">
           {/* LEFT: Product Catalog & Search (65%) */}
       <div className="flex flex-1 flex-col rounded-lg border border-border bg-surface shadow-sm overflow-hidden">
         {/* Search & Category Header */}
@@ -463,7 +471,7 @@ function PosContent() {
         </div>
 
         {/* Product Cards Grid */}
-        <div className="flex-1 overflow-y-auto p-3">
+        <div className="flex-1 p-3">
           {isLoading ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
               {[...Array(12)].map((_, i) => (
@@ -533,9 +541,9 @@ function PosContent() {
 
       {/* RIGHT: Active Cart Drawer (35%) */}
       <div
-        className={`flex w-full flex-col rounded-lg border border-border bg-surface shadow-sm lg:w-[380px] xl:w-[420px] ${
+        className={`flex w-full flex-col rounded-lg border border-border bg-surface shadow-sm overflow-hidden lg:w-[380px] xl:w-[420px] lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)] ${
           isMobileCartOpen
-            ? 'fixed inset-x-0 bottom-0 top-16 z-50 rounded-none border-t shadow-2xl p-2 lg:static lg:p-0 lg:rounded-lg lg:border'
+            ? 'fixed inset-x-0 bottom-0 top-16 z-50 rounded-none border-t shadow-2xl p-2 lg:p-0 lg:rounded-lg lg:border'
             : 'hidden lg:flex'
         }`}
       >
@@ -767,24 +775,41 @@ function PosContent() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs"
         >
           <div className="relative w-full max-w-md rounded-2xl bg-white border border-border shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95">
-            <div className="flex items-center gap-3 border-b border-border pb-4">
-              <div className="h-11 w-11 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="h-6 w-6" />
+            {/* Brand + Shop Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <ShopLogo name={shopName} logoUrl={shopLogoUrl} size="sm" />
+                <div>
+                  <p className="text-xs font-bold text-slate-900 leading-tight">{shopName}</p>
+                  <p className="text-[10px] text-slate-500">Digital Payment Confirmation</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  Payment Verified via SSLCommerz
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Transaction details successfully saved to database.
-                </p>
+              <DokaniLogo size={24} showWordmark subtitle="Verified" />
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Payment Verified via SSLCommerz
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Invoice settled and inventory updated.
+                  </p>
+                </div>
               </div>
+              <span className="rounded border-2 border-emerald-700 bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-emerald-800">
+                PAID
+              </span>
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2 text-xs">
               <div className="flex justify-between py-1 border-b border-slate-200">
                 <span className="text-slate-500 font-medium">Invoice Number:</span>
-                <span className="font-bold text-slate-900">{gatewaySuccessData.invoice.invoiceNumber}</span>
+                <span className="font-mono font-bold text-slate-900">{gatewaySuccessData.invoice.invoiceNumber}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-200">
                 <span className="text-slate-500 font-medium">Transaction ID (tran_id):</span>
@@ -804,13 +829,20 @@ function PosContent() {
               )}
               <div className="flex justify-between py-1.5 pt-1">
                 <span className="font-semibold text-slate-700">Amount Paid:</span>
-                <span className="text-base font-extrabold text-emerald-700">
+                <span className="text-base font-extrabold text-emerald-700 tabular-nums">
                   ৳{Number(gatewaySuccessData.amount || gatewaySuccessData.invoice.total).toLocaleString()}
                 </span>
               </div>
             </div>
 
-            <div className="pt-2">
+            <div className="pt-1 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setGatewaySuccessData(null)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition"
+              >
+                New Sale
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -818,9 +850,9 @@ function PosContent() {
                   setGatewaySuccessData(null);
                   setCompletedInvoice(inv);
                 }}
-                className="w-full py-3 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 transition flex items-center justify-center gap-2 shadow-xs"
+                className="flex-1 py-2.5 rounded-xl bg-brand text-white text-xs font-bold hover:bg-brand-hover transition flex items-center justify-center gap-2 shadow-xs"
               >
-                <span>OK / View & Print Receipt</span>
+                <span>View Invoice</span>
               </button>
             </div>
           </div>

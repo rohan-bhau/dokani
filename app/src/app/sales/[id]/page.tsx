@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { AuthGuard } from '@/components/auth-guard';
+import { PrintableReceipt } from '@/components/pos/printable-receipt';
 import { useGetSaleByIdQuery, useVoidSaleMutation } from '@/store/salesApi';
 
 import {
@@ -28,17 +29,15 @@ export default function SaleDetailPage() {
   const [voidSale, { isLoading: isVoiding }] = useVoidSaleMutation();
 
   const [isVoidModalOpen, setIsVoidModalOpen] = useState(false);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [voidReason, setVoidReason] = useState('');
   const [voidError, setVoidError] = useState('');
   const [copiedLink, setCopiedLink] = useState(false);
 
   const invoice = data?.data;
 
-  const formatBdt = (paisas: number) => {
-    return (paisas / 100).toLocaleString('en-BD', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+  const formatBdt = (amount: number) => {
+    return amount.toLocaleString('en-BD');
   };
 
   const handleVoidSale = async (e: React.FormEvent) => {
@@ -124,11 +123,11 @@ export default function SaleDetailPage() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={() => setIsPrintModalOpen(true)}
                 className="inline-flex items-center gap-1.5 px-3 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition"
               >
                 <Printer className="w-4 h-4" />
-                Print Receipt
+                Print Invoice
               </button>
 
               {invoice.status === 'COMPLETED' && (
@@ -228,14 +227,16 @@ export default function SaleDetailPage() {
               <div className="space-y-2 text-xs text-slate-500 max-w-sm">
                 <p className="font-semibold text-slate-700">Payment Breakdown:</p>
                 <div className="space-y-1">
-                  {invoice.payments?.map((p, idx) => (
-                    <div key={idx} className="flex justify-between border-b border-slate-100 py-1">
-                      <span>{p.method} Tender:</span>
-                      <span className="font-mono font-semibold text-slate-800">
-                        ৳{formatBdt(p.amount)}
-                      </span>
-                    </div>
-                  ))}
+                  {invoice.payments
+                    ?.filter((p) => p.amount > 0)
+                    .map((p, idx) => (
+                      <div key={idx} className="flex justify-between border-b border-slate-100 py-1">
+                        <span>{p.method} Tender:</span>
+                        <span className="font-mono font-semibold text-slate-800">
+                          ৳{formatBdt(p.amount)}
+                        </span>
+                      </div>
+                    ))}
                 </div>
               </div>
 
@@ -326,6 +327,11 @@ export default function SaleDetailPage() {
               </div>
             </div>
           )}
+
+          <PrintableReceipt
+            invoice={isPrintModalOpen ? invoice : null}
+            onClose={() => setIsPrintModalOpen(false)}
+          />
       </div>
     </AuthGuard>
   );

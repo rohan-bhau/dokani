@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AuthGuard } from '@/components/auth-guard';
+import { ShopLogo } from '@/components/dokani-logo';
 import { useGetSettingsQuery, useUpdateSettingsMutation } from '@/store/settingsApi';
 import {
   Settings,
@@ -22,6 +23,9 @@ export default function SettingsPage() {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
+    address: '',
+    binNumber: '',
+    logoUrl: '',
     businessType: 'Grocery',
     paperSize: 'RECEIPT_80MM',
     receiptFooter: 'Thank you for shopping with us!',
@@ -43,6 +47,9 @@ export default function SettingsPage() {
       setFormData({
         name: s.name || '',
         phone: s.phone || '',
+        address: s.address || '',
+        binNumber: s.binNumber || '',
+        logoUrl: s.logoUrl || '',
         businessType: s.businessType || 'Grocery',
         paperSize: s.paperSize || 'RECEIPT_80MM',
         receiptFooter: s.receiptFooter || 'Thank you for shopping with us!',
@@ -70,6 +77,9 @@ export default function SettingsPage() {
       await updateSettings({
         name: formData.name.trim(),
         phone: formData.phone.trim() || undefined,
+        address: formData.address.trim() || undefined,
+        binNumber: formData.binNumber.trim() || undefined,
+        logoUrl: formData.logoUrl.trim() || null,
         businessType: formData.businessType,
         paperSize: formData.paperSize,
         receiptFooter: formData.receiptFooter.trim() || undefined,
@@ -96,11 +106,20 @@ export default function SettingsPage() {
     <AuthGuard>
       <div className="max-w-4xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Header */}
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Store Settings</h1>
-            <p className="text-sm text-slate-600">
-              Configure store identity, thermal printing layout, VAT rules, and cashier authorization limits.
-            </p>
+          <div className="flex items-center gap-3.5">
+            <ShopLogo
+              name={formData.name || data?.data?.name || 'Store'}
+              logoUrl={formData.logoUrl.trim() || data?.data?.logoUrl || null}
+              size="lg"
+            />
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+                {formData.name || data?.data?.name || 'Store'} Settings
+              </h1>
+              <p className="text-sm text-slate-600">
+                Configure store identity, thermal printing layout, VAT rules, and cashier authorization limits.
+              </p>
+            </div>
           </div>
 
           {/* Navigation Tabs */}
@@ -195,6 +214,66 @@ export default function SettingsPage() {
                         <option value="Wholesale">Wholesale Distributor</option>
                         <option value="Other">Other Retail</option>
                       </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        VAT / BIN Registration Number
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.binNumber}
+                        onChange={(e) => handleChange('binNumber', e.target.value)}
+                        placeholder="e.g. 001234567-0101"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Shop Address
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.address}
+                        onChange={(e) => handleChange('address', e.target.value)}
+                        placeholder="e.g. House 12, Road 4, Mirpur 10, Dhaka"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2 pt-2 border-t border-slate-100">
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Shop Logo URL (Displayed on Invoices & Payment Confirmation)
+                      </label>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <ShopLogo
+                          name={formData.name || 'Shop'}
+                          logoUrl={formData.logoUrl.trim() || null}
+                          size="lg"
+                        />
+                        <div className="flex-1 w-full flex gap-2">
+                          <input
+                            type="text"
+                            value={formData.logoUrl}
+                            onChange={(e) => handleChange('logoUrl', e.target.value)}
+                            placeholder="https://example.com/shop-logo.png or /logos/karim-store.svg"
+                            className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono"
+                          />
+                          {formData.logoUrl && (
+                            <button
+                              type="button"
+                              onClick={() => handleChange('logoUrl', '')}
+                              className="px-3 py-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1.5">
+                        Leave empty to automatically use your shop initials badge on invoices.
+                      </p>
                     </div>
                   </div>
                 </div>

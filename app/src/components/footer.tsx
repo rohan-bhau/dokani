@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Store } from 'lucide-react';
+import { DokaniLogo } from '@/components/dokani-logo';
 
 export function Footer() {
   const pathname = usePathname();
@@ -17,11 +17,8 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           <div className="space-y-3 md:col-span-1">
-            <Link href="/" className="flex items-center gap-2 font-bold text-slate-900">
-              <span className="flex h-7 w-7 items-center justify-center rounded bg-brand text-xs font-bold text-white">
-                DP
-              </span>
-              <span className="text-base tracking-tight">Dokani</span>
+            <Link href="/" className="inline-flex items-center">
+              <DokaniLogo size={30} showWordmark />
             </Link>
             <p className="text-xs text-slate-500 leading-relaxed">
               Modern POS, automated customer credit ledger, and real-time inventory management built specifically for Bangladeshi retail merchants and departmental stores.

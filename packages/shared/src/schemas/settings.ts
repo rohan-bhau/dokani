@@ -7,7 +7,16 @@ export const updateSettingsSchema = z
     address: z.string().trim().max(250).optional(),
     phone: z.string().trim().max(20).optional(),
     binNumber: z.string().trim().max(50).optional(),
-    logoUrl: z.string().url().max(500).optional().nullable(),
+    logoUrl: z
+      .string()
+      .trim()
+      .max(500)
+      .refine(
+        (val) => val.startsWith('https://') || val.startsWith('http://') || val.startsWith('/'),
+        'Logo URL must be a valid http(s) URL or relative path starting with /'
+      )
+      .optional()
+      .nullable(),
     invoicePrefix: z.string().trim().min(1).max(10).optional(),
     paperSize: z.enum(['RECEIPT_80MM', 'A4']).optional(),
     receiptFooter: z.string().trim().max(200).optional(),

@@ -5,6 +5,9 @@ export interface TenantSettings {
   name: string;
   slug: string;
   phone: string | null;
+  address: string | null;
+  binNumber: string | null;
+  logoUrl: string | null;
   businessType: string | null;
   paperSize: string;
   receiptFooter: string | null;

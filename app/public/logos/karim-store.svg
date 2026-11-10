@@ -1,0 +1,13 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ks-bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1E3A8A" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#ks-bg)" />
+  <path d="M14 22L18 14H46L50 22" stroke="#F59E0B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M14 22C14 24.7614 16.2386 27 19 27C21.7614 27 24 24.7614 24 22C24 24.7614 26.2386 27 29 27C31.7614 27 34 24.7614 34 22C34 24.7614 36.2386 27 39 27C41.7614 27 44 24.7614 44 22C44 24.7614 46.2386 27 49 27C51.7614 27 50 22 50 22" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round" />
+  <text x="32" y="48" text-anchor="middle" fill="#FFFFFF" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="800" letter-spacing="1">KS</text>
+</svg>
+

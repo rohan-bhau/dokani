@@ -52,6 +52,7 @@ export async function seedDemoData(): Promise<void> {
   async function seedStore(config: {
     tenantName: string;
     slug: string;
+    logoUrl: string;
     address: string;
     phone: string;
     ownerName: string;
@@ -105,6 +106,7 @@ export async function seedDemoData(): Promise<void> {
         data: {
           name: config.tenantName,
           slug: config.slug,
+          logoUrl: config.logoUrl,
           phone: config.phone,
           address: config.address,
           businessType: 'Grocery & Retail',
@@ -123,6 +125,7 @@ export async function seedDemoData(): Promise<void> {
         where: { id: tenant.id },
         data: {
           name: config.tenantName,
+          logoUrl: tenant.logoUrl || config.logoUrl,
           phone: config.phone,
           address: config.address,
           businessType: 'Grocery & Retail',
@@ -577,6 +580,7 @@ export async function seedDemoData(): Promise<void> {
   await seedStore({
     tenantName: 'Karim Store',
     slug: 'karim-store',
+    logoUrl: '/logos/karim-store.svg',
     phone: '01711111111',
     address: 'House 42, Road 9/A, Dhanmondi, Dhaka-1209',
     ownerName: 'Karim Mia',
@@ -871,6 +875,7 @@ export async function seedDemoData(): Promise<void> {
   await seedStore({
     tenantName: 'Rahim Super Mart',
     slug: 'rahim-super-mart',
+    logoUrl: '/logos/rahim-super-mart.svg',
     phone: '01822222222',
     address: 'GEC Circle, Nasirabad, Chittagong-4000',
     ownerName: 'Rahim Ullah',

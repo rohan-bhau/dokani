@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { DokaniLogo, ShopLogo } from '@/components/dokani-logo';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
 import {
@@ -28,6 +29,7 @@ import {
 import type { RootState, AppDispatch } from '@/store';
 import { logout as logoutAction } from '@/store/authSlice';
 import { useLogoutMutation } from '@/store/authApi';
+import { useGetSettingsQuery } from '@/store/settingsApi';
 
 export function Navigation() {
   const pathname = usePathname();
@@ -35,6 +37,11 @@ export function Navigation() {
   const dispatch = useDispatch<AppDispatch>();
   const { user: currentUser, isInitialized } = useSelector((state: RootState) => state.auth);
   const [logoutMutation] = useLogoutMutation();
+  const { data: settingsData } = useGetSettingsQuery(undefined, { skip: !currentUser });
+
+  const shopName =
+    settingsData?.data?.name || currentUser?.tenant?.name || currentUser?.name || 'Store';
+  const shopLogoUrl = settingsData?.data?.logoUrl ?? currentUser?.tenant?.logoUrl ?? null;
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<'operations' | 'ledger' | 'user' | null>(null);
@@ -98,17 +105,9 @@ export function Navigation() {
         <div className="flex items-center gap-6 xl:gap-8">
           <Link
             href="/"
-            className="flex items-center gap-2.5 font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 rounded"
+            className="flex items-center focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 rounded"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-sm font-bold text-white shadow-xs">
-              DP
-            </span>
-            <div className="flex flex-col">
-              <span className="text-lg font-black tracking-tight leading-none text-slate-900">Dokani</span>
-              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mt-0.5">
-                Retail OS
-              </span>
-            </div>
+            <DokaniLogo size={36} showWordmark />
           </Link>
 
           {/* Desktop Navigation Links */}
@@ -326,33 +325,55 @@ export function Navigation() {
                 </span>
               )}
 
-              {/* Store User Profile Menu Dropdown */}
-              <div className="relative">
+              {/* Store Avatar Profile Menu Dropdown */}
+              <div className="relative group">
                 <button
                   type="button"
+                  aria-label={`${shopName} menu`}
                   onClick={() => setOpenDropdown(openDropdown === 'user' ? null : 'user')}
-                  className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-left transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand"
+                  className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white p-0.5 pr-1.5 transition hover:border-brand/50 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand"
                 >
-                  <div className="flex flex-col text-right">
-                    <span className="font-semibold text-slate-900 text-xs leading-tight line-clamp-1 max-w-[120px] sm:max-w-[160px]">
-                      {currentUser.tenant?.name || currentUser.name}
-                    </span>
-                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                      {currentUser.roles?.[0] || 'Merchant'}
-                    </span>
-                  </div>
-                  <ChevronDown className={`h-3 w-3 text-slate-400 transition-transform ${openDropdown === 'user' ? 'rotate-180' : ''}`} />
+                  <ShopLogo
+                    name={shopName}
+                    logoUrl={shopLogoUrl}
+                    size="sm"
+                    rounded="full"
+                  />
+                  <ChevronDown className={`h-3 w-3 text-slate-500 transition-transform ${openDropdown === 'user' ? 'rotate-180' : ''}`} />
                 </button>
 
+                {/* Hover Tooltip showing Shop Name */}
+                {openDropdown !== 'user' && (
+                  <div
+                    role="tooltip"
+                    className="pointer-events-none absolute right-0 top-full mt-2 whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100 z-50"
+                  >
+                    {shopName}
+                  </div>
+                )}
+
                 {openDropdown === 'user' && (
-                  <div className="absolute right-0 mt-1.5 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg z-50 animate-in fade-in slide-in-from-top-1">
-                    <div className="p-2 border-b border-slate-100 mb-1">
-                      <p className="text-xs font-bold text-slate-900 truncate">
-                        {currentUser.name}
-                      </p>
-                      <p className="text-[11px] text-slate-500 truncate">
-                        {currentUser.phone}
-                      </p>
+                  <div className="absolute right-0 mt-1.5 w-60 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg z-50 animate-in fade-in slide-in-from-top-1">
+                    <div className="flex items-center gap-2.5 p-2 border-b border-slate-100 mb-1">
+                      <ShopLogo
+                        name={shopName}
+                        logoUrl={shopLogoUrl}
+                        size="sm"
+                        rounded="lg"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <p className="text-xs font-bold text-slate-900 truncate">
+                            {shopName}
+                          </p>
+                          <span className="shrink-0 rounded bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-700 border border-emerald-200">
+                            {currentUser.roles?.[0] || 'Merchant'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 truncate">
+                          {currentUser.name} &bull; {currentUser.phone}
+                        </p>
+                      </div>
                     </div>
 
                     <Link

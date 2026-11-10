@@ -20,6 +20,8 @@ const rawBaseQuery = fetchBaseQuery({
   },
 });
 
+let refreshPromise: Promise<boolean> | null = null;
+
 const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
   args,
   api,
@@ -27,47 +29,58 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
 ) => {
   let result = await rawBaseQuery(args, api, extraOptions);
 
-  if (result.error && result.error.status === 401) {
-    if (typeof window !== 'undefined') {
-      const refreshToken = localStorage.getItem('dokani_refresh_token');
-      if (refreshToken) {
-        const refreshResult = await rawBaseQuery(
-          {
-            url: '/auth/refresh',
-            method: 'POST',
-            body: { refreshToken },
-          },
-          api,
-          extraOptions
-        );
+  if (result.error && result.error.status === 401 && typeof window !== 'undefined') {
+    const refreshToken = localStorage.getItem('dokani_refresh_token');
 
-        const responseData = refreshResult.data as {
-          success: boolean;
-          data?: { accessToken: string; refreshToken: string; user: any };
-        };
+    if (refreshToken) {
+      if (!refreshPromise) {
+        refreshPromise = (async () => {
+          try {
+            const refreshResult = await rawBaseQuery(
+              {
+                url: '/auth/refresh',
+                method: 'POST',
+                body: { refreshToken },
+              },
+              api,
+              extraOptions
+            );
 
-        if (responseData?.success && responseData?.data?.accessToken) {
-          api.dispatch(
-            setCredentials({
-              user: responseData.data.user,
-              token: responseData.data.accessToken,
-              refreshToken: responseData.data.refreshToken,
-            })
-          );
-          // Retry the original request with the fresh token
-          result = await rawBaseQuery(args, api, extraOptions);
-          return result;
-        }
+            const responseData = refreshResult.data as {
+              success: boolean;
+              data?: { accessToken: string; refreshToken: string; user: any };
+            };
+
+            if (responseData?.success && responseData?.data?.accessToken) {
+              api.dispatch(
+                setCredentials({
+                  user: responseData.data.user,
+                  token: responseData.data.accessToken,
+                  refreshToken: responseData.data.refreshToken,
+                })
+              );
+              return true;
+            }
+            return false;
+          } finally {
+            refreshPromise = null;
+          }
+        })();
       }
 
-      // If refresh token is missing or refresh request failed
-      if (
-        !window.location.pathname.startsWith('/login') &&
-        !window.location.pathname.startsWith('/register')
-      ) {
-        api.dispatch(logout());
-        window.location.href = '/login';
+      const refreshed = await refreshPromise;
+      if (refreshed) {
+        result = await rawBaseQuery(args, api, extraOptions);
+        return result;
       }
+    }
+
+    if (
+      !window.location.pathname.startsWith('/login') &&
+      !window.location.pathname.startsWith('/register')
+    ) {
+      api.dispatch(logout());
+      window.location.href = '/login';
     }
   }
 

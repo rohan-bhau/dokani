@@ -21,6 +21,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
+import { DokaniLogo, ShopLogo } from '@/components/dokani-logo';
 
 function PublicPaymentContent() {
   const params = useParams();
@@ -159,7 +160,7 @@ function PublicPaymentContent() {
       <header className="bg-white border-b border-slate-200 py-3.5 px-4 shadow-xs">
         <div className="max-w-xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Store className="w-5 h-5 text-emerald-600" />
+            <DokaniLogo size={26} />
             <span className="font-bold text-slate-900 tracking-tight text-sm">Dokani Hosted Checkout</span>
           </div>
           <div className="flex items-center space-x-1.5 text-xs text-slate-500">
@@ -187,8 +188,12 @@ function PublicPaymentContent() {
         {step === 'SUCCESS' || isAlreadyPaid ? (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="p-8 text-center bg-gradient-to-b from-emerald-50 to-white border-b border-slate-100">
-              <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 ring-8 ring-emerald-50">
-                <CheckCircle2 className="w-7 h-7" />
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <ShopLogo name={invoice.tenant.name} size="md" />
+                <DokaniLogo size={32} />
+              </div>
+              <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 ring-8 ring-emerald-50">
+                <CheckCircle2 className="w-6 h-6" />
               </div>
               <h1 className="text-xl font-bold text-slate-900 mb-1">Payment Successful</h1>
               <p className="text-xs text-slate-600">
@@ -246,16 +251,19 @@ function PublicPaymentContent() {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             {/* Merchant & Total Header */}
             <div className="p-5 border-b border-slate-200 bg-slate-50">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 mb-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    Verified Dokan Merchant
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                  <ShopLogo name={invoice.tenant.name} size="md" />
+                  <div>
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 mb-1">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      Verified Dokani Merchant
+                    </div>
+                    <h1 className="text-base font-bold text-slate-900">{invoice.tenant.name}</h1>
+                    {invoice.tenant.phone && (
+                      <p className="text-[11px] text-slate-500">Phone: {invoice.tenant.phone}</p>
+                    )}
                   </div>
-                  <h1 className="text-base font-bold text-slate-900">{invoice.tenant.name}</h1>
-                  {invoice.tenant.phone && (
-                    <p className="text-[11px] text-slate-500">Phone: {invoice.tenant.phone}</p>
-                  )}
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] text-slate-500 uppercase tracking-wider block">

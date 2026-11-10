@@ -22,6 +22,7 @@ import {
   Lock,
 } from 'lucide-react';
 import type { RootState } from '@/store';
+import { ShopLogo } from '@/components/dokani-logo';
 
 export default function HomePage() {
   const { user, isInitialized } = useSelector((state: RootState) => state.auth);
@@ -34,9 +35,11 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand text-white shadow-2xs">
-                  <Sparkles className="h-5 w-5" />
-                </div>
+                <ShopLogo
+                  name={user.tenant?.name || 'My Retail Store'}
+                  logoUrl={user.tenant?.logoUrl ?? null}
+                  size="md"
+                />
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />

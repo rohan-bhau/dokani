@@ -9,6 +9,7 @@ export interface BackendUser {
     id: string;
     name: string;
     slug: string;
+    logoUrl?: string | null;
   };
   roles: string[];
   permissions: string[];
