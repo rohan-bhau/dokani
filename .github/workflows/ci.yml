@@ -62,10 +62,10 @@ jobs:
         with:
           version: 12.5.1
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - name: Install dependencies
@@ -74,14 +74,14 @@ jobs:
       - name: Build shared package
         run: pnpm --filter @dokani/shared build
 
-      - name: Typecheck all workspaces
-        run: pnpm typecheck
-
       - name: Generate Prisma client & Push Schema
         run: |
           cd server
           pnpm prisma generate
           pnpm prisma db push --skip-generate
+
+      - name: Typecheck all workspaces
+        run: pnpm typecheck
 
       - name: Run Server Integration Tests
         run: pnpm --filter @dokani/server test
