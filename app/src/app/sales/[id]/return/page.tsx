@@ -32,11 +32,8 @@ export default function SaleReturnPage() {
 
   const invoice = data?.data;
 
-  const formatBdt = (paisas: number) => {
-    return (paisas / 100).toLocaleString('en-BD', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+  const formatBdt = (amount: number) => {
+    return amount.toLocaleString('en-BD');
   };
 
   const handleQuantityChange = (productId: string, val: number, maxQty: number) => {

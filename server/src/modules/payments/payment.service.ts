@@ -1,5 +1,5 @@
 import { PaymentRepository } from './payment.repository.js';
-import { prisma } from '../../config/prisma.js';
+import { prisma, Prisma } from '../../config/prisma.js';
 import { env } from '../../config/env.js';
 import { BkashPaymentProvider } from './providers/bkash.provider.js';
 import { SslCommerzPaymentProvider } from './providers/sslcommerz.provider.js';
@@ -139,7 +139,7 @@ export class PaymentService {
       provider: provider.name,
       eventId,
       eventType: 'PAYMENT_CALLBACK',
-      payload: queryOrBody as import('@prisma/client').Prisma.InputJsonValue,
+      payload: queryOrBody as Prisma.InputJsonValue,
     });
 
     // Verify payment server-to-server with gateway
@@ -152,7 +152,7 @@ export class PaymentService {
       const confirmedPayment = await this.paymentRepo.confirmPayment(
         payment.id,
         verification.gatewayTransactionId,
-        verification.rawResponse as import('@prisma/client').Prisma.InputJsonValue
+        verification.rawResponse as Prisma.InputJsonValue
       );
 
       await this.paymentRepo.markWebhookProcessed(provider.name, eventId);
@@ -179,7 +179,7 @@ export class PaymentService {
       await this.paymentRepo.failPayment(
         payment.id,
         verification.failureReason || 'Verification failed',
-        verification.rawResponse as import('@prisma/client').Prisma.InputJsonValue
+        verification.rawResponse as Prisma.InputJsonValue
       );
 
       emitToTenant(payment.tenantId, 'payment:failed', {

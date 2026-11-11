@@ -36,11 +36,8 @@ export default function SalesPage() {
   const total = data?.data?.total || 0;
   const totalPages = data?.data?.totalPages || 1;
 
-  const formatBdt = (paisas: number) => {
-    return (paisas / 100).toLocaleString('en-BD', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+  const formatBdt = (amount: number) => {
+    return amount.toLocaleString('en-BD');
   };
 
   const getStatusBadge = (status: string) => {
