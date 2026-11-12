@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma.js';
 import { hashPassword } from '../modules/auth/auth.password.js';
+import { formatInvoiceNumber, getShopInvoiceCode } from '../modules/sales/sales.repository.js';
 import crypto from 'node:crypto';
 
 export async function seedDemoData(): Promise<void> {
@@ -505,10 +506,11 @@ export async function seedDemoData(): Promise<void> {
         const paidTotal = method === 'CREDIT_BAKI' ? BigInt(0) : total;
         const dueTotal = method === 'CREDIT_BAKI' ? total : BigInt(0);
 
+        const shopCode = getShopInvoiceCode(tenant.name, tenant.invoicePrefix);
         const inv = await prisma.invoice.create({
           data: {
             tenantId: tenant.id,
-            invoiceNumber: `INV-${1000 + i}`,
+            invoiceNumber: formatInvoiceNumber(shopCode, BigInt(i)),
             customerId: customer?.id || null,
             status: 'COMPLETED',
             subtotal,

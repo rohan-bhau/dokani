@@ -2,14 +2,72 @@ import type { CreateSaleInput, QuerySaleInput } from '@dokani/shared';
 import { ConflictError, NotFoundError, BadRequestError } from '../../common/errors.js';
 import { prisma } from '../../config/prisma.js';
 
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+export function getShopInvoiceCode(name?: string | null, invoicePrefix?: string | null): string {
+  const trimmedPrefix = invoicePrefix?.trim();
+  if (trimmedPrefix && trimmedPrefix.toUpperCase() !== 'INV-') {
+    const cleaned = trimmedPrefix.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    if (cleaned.length > 0) {
+      return cleaned.slice(0, 4);
+    }
+  }
+
+  const words = (name ?? '')
+    .trim()
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean);
+
+  if (words.length >= 2) {
+    return words
+      .slice(0, 3)
+      .map((word) => word[0]?.toUpperCase() ?? '')
+      .join('');
+  }
+
+  const singleWord = words[0];
+  if (singleWord) {
+    return singleWord.slice(0, 2).toUpperCase();
+  }
+
+  return 'DK';
+}
+
+export function encodeAlphabetSequence(value: bigint, width = 5): string {
+  const zeroBased = value > 0n ? value - 1n : 0n;
+  const spaceSize = 26n ** BigInt(width);
+
+  // Bijective linear permutation mod 26^width (multiplier coprime to 2 and 13)
+  // produces mixed-looking 5-letter codes while guaranteeing zero collisions.
+  let remaining =
+    zeroBased < spaceSize
+      ? (zeroBased * 7919173n + 5284917n) % spaceSize
+      : zeroBased;
+
+  let result = '';
+  do {
+    const index = Number(remaining % 26n);
+    result = ALPHABET[index] + result;
+    remaining = remaining / 26n;
+  } while (remaining > 0n);
+
+  return result.padStart(width, 'A');
+}
+
+export function formatInvoiceNumber(shopCode: string, sequence: bigint, date = new Date()): string {
+  const yy = String(date.getFullYear()).slice(-2);
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  return `${shopCode}-${yy}${mm}-${encodeAlphabetSequence(sequence)}`;
+}
+
 export class SalesRepository {
   async getNextInvoiceNumber(tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0], tenantId: string) {
     const tenant = await tx.tenant.findUnique({
       where: { id: tenantId },
-      select: { invoicePrefix: true },
+      select: { name: true, invoicePrefix: true },
     });
 
-    const prefix = tenant?.invoicePrefix || 'INV-';
+    const shopCode = getShopInvoiceCode(tenant?.name, tenant?.invoicePrefix);
 
     const counter = await tx.$queryRaw<Array<{ last_value: bigint }>>`
       INSERT INTO tenant_counters (tenant_id, counter_type, last_value, updated_at)
@@ -20,8 +78,7 @@ export class SalesRepository {
     `;
 
     const lastVal = counter[0]?.last_value ?? 1n;
-    const year = new Date().getFullYear();
-    return `${prefix}${year}-${String(lastVal).padStart(6, '0')}`;
+    return formatInvoiceNumber(shopCode, lastVal);
   }
 
   async checkout(

@@ -185,7 +185,7 @@ export default function SalesPage() {
                     {invoices.map((inv) => (
                       <tr key={inv.id} className="hover:bg-slate-50/70 transition">
                         <td className="px-4 py-3 font-mono font-semibold text-slate-900">
-                          #{inv.invoiceNumber}
+                          {inv.invoiceNumber}
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-500">
                           {new Date(inv.createdAt).toLocaleString('en-BD', {

@@ -96,7 +96,7 @@ export default function SaleDetailPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-2xl font-bold text-slate-900 tracking-tight font-mono">
-                    #{invoice.invoiceNumber}
+                    {invoice.invoiceNumber}
                   </h1>
                   <span
                     className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
@@ -160,7 +160,7 @@ export default function SaleDetailPage() {
               <div>
                 <span className="text-slate-400 block font-semibold uppercase">Invoice Info</span>
                 <span className="font-mono text-slate-800 font-bold block mt-1">
-                  #{invoice.invoiceNumber}
+                  {invoice.invoiceNumber}
                 </span>
                 <span className="text-slate-500">
                   {new Date(invoice.createdAt).toLocaleDateString()}
