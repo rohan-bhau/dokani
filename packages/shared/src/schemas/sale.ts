@@ -36,6 +36,7 @@ export const querySaleSchema = z
   .object({
     page: z.coerce.number().int().positive().default(1),
     limit: z.coerce.number().int().positive().max(100).default(20),
+    search: z.string().trim().min(1).max(100).optional(),
     status: z.enum(['COMPLETED', 'VOIDED', 'PARTIAL_RETURN', 'FULL_RETURN']).optional(),
     customerId: z.string().uuid().optional(),
     startDate: z.string().datetime().optional(),

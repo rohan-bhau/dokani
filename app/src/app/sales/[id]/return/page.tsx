@@ -115,7 +115,7 @@ export default function SaleReturnPage() {
                 Process Sale Return
               </h1>
               <p className="text-xs text-slate-500">
-                Invoice {invoice.invoiceNumber} &bull; Total: ৳{formatBdt(invoice.total)}
+                Invoice No: {invoice.invoiceNumber} &bull; Total: ৳{formatBdt(invoice.total)}
               </p>
             </div>
           </div>

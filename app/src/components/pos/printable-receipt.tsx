@@ -127,7 +127,7 @@ function InvoiceCopy({
             </span>
           )}
           <p className="font-mono font-bold text-slate-900 text-xs">
-            {invoice.invoiceNumber}
+            Invoice No: {invoice.invoiceNumber}
           </p>
           <p className="text-[10px] text-slate-500">{invoiceDate}</p>
         </div>

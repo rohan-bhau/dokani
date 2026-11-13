@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AuthGuard } from '@/components/auth-guard';
 import { useGetSalesQuery } from '@/store/salesApi';
@@ -19,14 +19,25 @@ import {
 } from 'lucide-react';
 
 export default function SalesPage() {
+  const [searchInput, setSearchInput] = useState<string>('');
+  const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [page, setPage] = useState(1);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
   const { data, isLoading } = useGetSalesQuery({
     page,
     limit: 20,
+    search: debouncedSearch || undefined,
     status: (statusFilter as any) || undefined,
     startDate: startDate || undefined,
     endDate: endDate || undefined,
@@ -100,7 +111,31 @@ export default function SalesPage() {
 
           {/* Filters Bar */}
           <div className="bg-white p-4 rounded-xl shadow-xs border border-slate-200 flex flex-wrap gap-3 items-center justify-between">
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 flex-1">
+              <div className="relative min-w-[240px] flex-1 max-w-xs">
+                <label htmlFor="invoice-search" className="sr-only">
+                  Search by invoice number
+                </label>
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  id="invoice-search"
+                  type="text"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Search by invoice number..."
+                  className="w-full pl-9 pr-14 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchInput('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-medium text-slate-400 hover:text-slate-700"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
               <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
                 <Filter className="w-4 h-4 text-slate-400" />
                 Status:
@@ -172,7 +207,7 @@ export default function SalesPage() {
                 <table className="w-full text-left text-sm text-slate-600">
                   <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-200">
                     <tr>
-                      <th className="px-4 py-3.5">Invoice #</th>
+                      <th className="px-4 py-3.5">Invoice Number</th>
                       <th className="px-4 py-3.5">Date & Time</th>
                       <th className="px-4 py-3.5">Items</th>
                       <th className="px-4 py-3.5">Total Amount</th>

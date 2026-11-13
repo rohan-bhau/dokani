@@ -513,27 +513,11 @@ export function CheckoutModal({
           {/* 3. OFFICIAL SSLCOMMERZ GATEWAY CONTENT */}
           {method === 'CARD' && (
             <div className="space-y-4">
-              <div className="rounded-xl border border-indigo-200 bg-indigo-50/70 p-4 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-600 text-white">
-                    <CreditCard className="h-3.5 w-3.5" />
-                    SSLCommerz Gateway
-                  </div>
-                  <span className="text-xs font-semibold text-slate-500">Official Checkout</span>
-                </div>
-                <p className="text-xs text-slate-700 leading-relaxed">
-                  Clicking continue will redirect you to the official secure <span className="font-bold text-indigo-950">SSLCommerz Payment Gateway</span> (sandbox.sslcommerz.com) to pay <span className="font-bold text-slate-900">৳{total.toLocaleString()}</span>.
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 flex items-center gap-2.5">
+                <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+                <p className="text-xs text-slate-600">
+                  Pay <span className="font-semibold text-slate-900">৳{total.toLocaleString()}</span> securely via SSLCommerz (Cards, Mobile &amp; Net Banking).
                 </p>
-                <div className="rounded-lg bg-white/80 p-2.5 border border-indigo-100 text-[11px] text-slate-600 space-y-1">
-                  <p className="font-semibold text-indigo-900">Supported payment methods on official page:</p>
-                  <p>&bull; Debit / Credit Cards (Visa, Mastercard, Amex, UnionPay)</p>
-                  <p>&bull; Mobile Banking (bKash, Nagad, Rocket, Upay, Tap)</p>
-                  <p>&bull; Internet Banking (City Bank, BRAC, DBBL, Islami Bank, etc.)</p>
-                </div>
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-500 pt-1">
-                  <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-                  <span>After payment, SSLCommerz will return here and save the transaction ID.</span>
-                </div>
               </div>
 
               <button

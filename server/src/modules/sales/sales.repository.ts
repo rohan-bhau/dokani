@@ -306,9 +306,13 @@ export class SalesRepository {
     const page = query.page;
     const limit = query.limit;
     const skip = (page - 1) * limit;
+    const normalizedSearch = query.search?.trim().replace(/^#/, '');
 
     const where = {
       tenantId,
+      ...(normalizedSearch
+        ? { invoiceNumber: { contains: normalizedSearch, mode: 'insensitive' as const } }
+        : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.customerId ? { customerId: query.customerId } : {}),
       ...(query.startDate || query.endDate

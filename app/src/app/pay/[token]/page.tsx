@@ -181,7 +181,7 @@ function PublicPaymentContent() {
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Cancel and return to store</span>
             </Link>
-            <span className="text-[11px] text-slate-400 font-mono">Invoice {invoice.invoiceNumber}</span>
+            <span className="text-[11px] text-slate-400 font-mono">Invoice No: {invoice.invoiceNumber}</span>
           </div>
         )}
 
