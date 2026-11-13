@@ -285,7 +285,7 @@ export function PrintableReceipt({
       id="printable-invoice-portal"
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 print:static print:block print:bg-transparent print:p-0"
+      className="fixed inset-0 !mt-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 print:static print:block print:bg-transparent print:p-0"
     >
       <div
         className={`relative w-full ${

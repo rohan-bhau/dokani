@@ -130,7 +130,7 @@ export function ProductModal({ isOpen, onClose, productToEdit }: ProductModalPro
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+      className="fixed inset-0 !mt-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
     >
       <div className="relative w-full max-w-2xl rounded-lg bg-surface border border-border shadow-lg">
         <div className="flex items-center justify-between border-b border-border px-6 py-4">

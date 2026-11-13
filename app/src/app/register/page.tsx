@@ -252,7 +252,7 @@ export default function RegisterPage() {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs"
+          className="fixed inset-0 !mt-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs"
         >
           <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95">
             <div className="flex items-center gap-3">

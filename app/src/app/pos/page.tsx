@@ -772,7 +772,7 @@ function PosContent() {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs"
+          className="fixed inset-0 !mt-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs"
         >
           <div className="relative w-full max-w-md rounded-2xl bg-white border border-border shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95">
             {/* Brand + Shop Header */}

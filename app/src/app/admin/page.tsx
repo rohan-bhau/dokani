@@ -221,7 +221,7 @@ export default function AdminPortalPage() {
 
           {/* Assign Plan Modal */}
           {selectedTenant && (
-            <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="fixed inset-0 !mt-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
               <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
                 <h3 className="text-base font-bold text-slate-900">
                   Assign Plan: {selectedTenant.name}

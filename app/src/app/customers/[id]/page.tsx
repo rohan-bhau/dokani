@@ -308,7 +308,7 @@ export default function CustomerDetailPage({ params }: CustomerDetailPageProps) 
 
       {/* Collect Due Modal */}
       {isCollectModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="fixed inset-0 !mt-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-lg bg-surface p-6 shadow-xl border border-border">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div>

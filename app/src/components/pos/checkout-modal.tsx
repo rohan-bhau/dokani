@@ -239,7 +239,7 @@ export function CheckoutModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="checkout-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs"
+      className="fixed inset-0 !mt-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs"
     >
       <div className="relative w-full max-w-lg rounded-2xl bg-white border border-border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
         {/* Top Modal Header */}

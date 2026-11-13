@@ -201,7 +201,7 @@ export default function PurchasesPage() {
 
           {/* New Purchase Modal */}
           {isModalOpen && (
-            <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="fixed inset-0 !mt-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
               <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-center">
                   <h3 className="text-base font-bold text-slate-900">Receive Stock / New Purchase</h3>
