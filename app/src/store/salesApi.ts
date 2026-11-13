@@ -70,11 +70,20 @@ export const salesApi = baseApi.injectEndpoints({
         body: sale,
         headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
       }),
-      invalidatesTags: ['Product', 'Stock', 'InventoryAlert'],
+      invalidatesTags: [
+        'Product',
+        'Stock',
+        'InventoryAlert',
+        'Report',
+        'Sale',
+        'Customer',
+        'CustomerLedger',
+      ],
     }),
 
     getSaleById: builder.query<{ success: boolean; data: InvoiceResponse }, string>({
       query: (id) => `/sales/${id}`,
+      providesTags: (_result, _err, id) => [{ type: 'Sale', id }],
     }),
 
     getSales: builder.query<{ success: boolean; data: SalesListResponse }, QuerySaleInput>({
@@ -82,6 +91,7 @@ export const salesApi = baseApi.injectEndpoints({
         url: '/sales',
         params,
       }),
+      providesTags: ['Sale'],
     }),
 
     voidSale: builder.mutation<
@@ -93,7 +103,17 @@ export const salesApi = baseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Product', 'Stock', 'InventoryAlert'],
+      invalidatesTags: (_result, _err, { id }) => [
+        { type: 'Sale', id },
+        'Sale',
+        'Product',
+        'Stock',
+        'InventoryAlert',
+        'Report',
+        'Customer',
+        'CustomerLedger',
+        'AuditLog',
+      ],
     }),
 
     processReturn: builder.mutation<
@@ -122,7 +142,17 @@ export const salesApi = baseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Product', 'Stock', 'InventoryAlert'],
+      invalidatesTags: (_result, _err, { id }) => [
+        { type: 'Sale', id },
+        'Sale',
+        'Product',
+        'Stock',
+        'InventoryAlert',
+        'Report',
+        'Customer',
+        'CustomerLedger',
+        'AuditLog',
+      ],
     }),
 
     getReturns: builder.query<

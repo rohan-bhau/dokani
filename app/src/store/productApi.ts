@@ -14,6 +14,11 @@ export interface ProductItem {
   sku: string;
   barcode: string | null;
   categoryId: string | null;
+  category?: {
+    id: string;
+    name: string;
+    nameBn?: string | null;
+  } | null;
   unit: string;
   costPrice: number;
   sellPrice: number;
@@ -80,7 +85,12 @@ export const productApi = baseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: [{ type: 'Product', id: 'LIST' }, { type: 'InventoryAlert' }],
+      invalidatesTags: [
+        { type: 'Product', id: 'LIST' },
+        'Stock',
+        'InventoryAlert',
+        'Report',
+      ],
     }),
 
     updateProduct: builder.mutation<
@@ -95,7 +105,9 @@ export const productApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _err, { id }) => [
         { type: 'Product', id },
         { type: 'Product', id: 'LIST' },
-        { type: 'InventoryAlert' },
+        'Stock',
+        'InventoryAlert',
+        'Report',
       ],
     }),
 
@@ -104,7 +116,12 @@ export const productApi = baseApi.injectEndpoints({
         url: `/products/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: [{ type: 'Product', id: 'LIST' }, { type: 'InventoryAlert' }],
+      invalidatesTags: [
+        { type: 'Product', id: 'LIST' },
+        'Stock',
+        'InventoryAlert',
+        'Report',
+      ],
     }),
 
     importProductsCsv: builder.mutation<{ success: boolean; data: CsvImportResult }, { csvData: string }>({
@@ -113,7 +130,12 @@ export const productApi = baseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: [{ type: 'Product', id: 'LIST' }, { type: 'InventoryAlert' }],
+      invalidatesTags: [
+        { type: 'Product', id: 'LIST' },
+        'Stock',
+        'InventoryAlert',
+        'Report',
+      ],
     }),
 
     adjustStock: builder.mutation<{ success: boolean }, StockAdjustmentInput>({
@@ -126,7 +148,10 @@ export const productApi = baseApi.injectEndpoints({
         { type: 'Product', id: productId },
         { type: 'Product', id: 'LIST' },
         { type: 'Stock', id: productId },
-        { type: 'InventoryAlert' },
+        'Stock',
+        'InventoryAlert',
+        'Report',
+        'AuditLog',
       ],
     }),
 

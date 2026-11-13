@@ -8,6 +8,7 @@ interface ProductTableProps {
   isLoading: boolean;
   onEdit: (product: ProductItem) => void;
   onAdjustStock: (product: ProductItem) => void;
+  showCategory?: boolean;
 }
 
 export function ProductTable({
@@ -15,6 +16,7 @@ export function ProductTable({
   isLoading,
   onEdit,
   onAdjustStock,
+  showCategory = true,
 }: ProductTableProps) {
   const [deleteProduct, { isLoading: isDeleting }] = useDeleteProductMutation();
 
@@ -59,6 +61,7 @@ export function ProductTable({
         <thead className="border-b border-border bg-surface-subtle text-slate-700 font-semibold uppercase tracking-wider text-[11px]">
           <tr>
             <th className="px-4 py-3">Product / SKU</th>
+            {showCategory && <th className="px-4 py-3">Category</th>}
             <th className="px-4 py-3">Barcode</th>
             <th className="px-4 py-3">Unit</th>
             <th className="px-4 py-3 text-right">Cost Price</th>
@@ -84,6 +87,17 @@ export function ProductTable({
                     SKU: {p.sku}
                   </div>
                 </td>
+                {showCategory && (
+                  <td className="px-4 py-3">
+                    {p.category?.name ? (
+                      <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                        {p.category.name}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
+                )}
                 <td className="px-4 py-3 font-mono text-slate-600">
                   {p.barcode || '—'}
                 </td>

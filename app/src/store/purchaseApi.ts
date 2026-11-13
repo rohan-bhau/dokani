@@ -87,7 +87,7 @@ export const purchaseApi = baseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Stock', 'Product', 'Report'],
+      invalidatesTags: ['Stock', 'Product', 'InventoryAlert', 'Report'],
     }),
   }),
 });

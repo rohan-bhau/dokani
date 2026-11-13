@@ -122,6 +122,7 @@ export const customerApi = baseApi.injectEndpoints({
         { type: 'Customer', id: customerId },
         { type: 'Customer', id: 'LIST' },
         { type: 'CustomerLedger', id: customerId },
+        'Report',
       ],
     }),
 
