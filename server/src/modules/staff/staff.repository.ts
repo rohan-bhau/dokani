@@ -177,6 +177,67 @@ export class StaffRepository {
 
     return this.getRolePermissionMatrix(tenantId);
   }
+
+  async findInvitationByTokenHash(tokenHash: string) {
+    return prisma.staffInvitation.findFirst({
+      where: { tokenHash },
+      include: {
+        role: true,
+        tenant: { select: { id: true, name: true, logoUrl: true } },
+      },
+    });
+  }
+
+  async acceptInvitation(params: {
+    invitationId: string;
+    tenantId: string;
+    roleId: string;
+    name: string;
+    phone: string;
+    email: string | null;
+    passwordHash: string;
+  }) {
+    return prisma.$transaction(async (tx) => {
+      const existing = await tx.user.findFirst({
+        where: { tenantId: params.tenantId, phone: params.phone },
+      });
+
+      if (existing) {
+        throw new BadRequestError('A user with this phone number already exists in this store.');
+      }
+
+      const user = await tx.user.create({
+        data: {
+          tenantId: params.tenantId,
+          name: params.name,
+          phone: params.phone,
+          email: params.email,
+          passwordHash: params.passwordHash,
+          isActive: true,
+          userRoles: {
+            create: {
+              roleId: params.roleId,
+            },
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          email: true,
+        },
+      });
+
+      await tx.staffInvitation.update({
+        where: { id: params.invitationId },
+        data: {
+          status: 'ACCEPTED',
+        },
+      });
+
+      return user;
+    });
+  }
 }
 
 export const staffRepository = new StaffRepository();

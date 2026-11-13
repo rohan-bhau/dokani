@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { Permission } from '@dokani/shared';
 import { AuthGuard } from '@/components/auth-guard';
 import { useGetStockValuationQuery } from '@/store/reportApi';
 
@@ -89,7 +90,7 @@ export default function InventoryPage() {
   };
 
   return (
-    <AuthGuard>
+    <AuthGuard requireAnyPermissions={[Permission.STOCK_VIEW, Permission.STOCK_ADJUST]}>
       <div className="max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Header */}
 

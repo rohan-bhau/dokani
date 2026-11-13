@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { Permission } from '@dokani/shared';
 import { authenticate } from '../../middleware/authenticate.js';
-import { requireAnyPermission } from '../../middleware/requirePermissions.js';
+import { requireAnyPermission, requirePermissions } from '../../middleware/requirePermissions.js';
 import { reportsController } from './reports.controller.js';
 
 export const reportsRouter = Router();
@@ -34,19 +34,19 @@ reportsRouter.get(
 
 reportsRouter.get(
   '/profit-loss',
-  requireAnyPermission(Permission.REPORT_VIEW_OWN, Permission.REPORT_VIEW_ALL),
+  requirePermissions(Permission.REPORT_VIEW_ALL),
   reportsController.getProfitLoss
 );
 
 reportsRouter.get(
   '/stock-value',
-  requireAnyPermission(Permission.REPORT_VIEW_OWN, Permission.REPORT_VIEW_ALL),
+  requireAnyPermission(Permission.REPORT_VIEW_ALL, Permission.STOCK_VIEW),
   reportsController.getStockValuation
 );
 
 reportsRouter.get(
   '/vat-summary',
-  requireAnyPermission(Permission.REPORT_VIEW_OWN, Permission.REPORT_VIEW_ALL),
+  requirePermissions(Permission.REPORT_VIEW_ALL),
   reportsController.getVatSummary
 );
 

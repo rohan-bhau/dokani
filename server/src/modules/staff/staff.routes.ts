@@ -12,6 +12,10 @@ import { staffController } from './staff.controller.js';
 
 export const staffRouter = Router();
 
+// Public invitation preview & acceptance endpoints
+staffRouter.get('/invitations/:token', staffController.getInvitationDetails);
+staffRouter.post('/invitations/:token/accept', staffController.acceptInvitation);
+
 staffRouter.use(authenticate);
 
 staffRouter.get(

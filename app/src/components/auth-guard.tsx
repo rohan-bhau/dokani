@@ -9,9 +9,33 @@ import type { RootState } from '@/store';
 
 interface AuthGuardProps {
   children: React.ReactNode;
+  requiredPermissions?: string[];
+  requireAnyPermissions?: string[];
 }
 
-export function AuthGuard({ children }: AuthGuardProps) {
+export function hasAnyPermission(
+  userPermissions: string[] | undefined,
+  required?: string[]
+): boolean {
+  if (!required || required.length === 0) return true;
+  if (!userPermissions || userPermissions.length === 0) return false;
+  return required.some((perm) => userPermissions.includes(perm));
+}
+
+export function hasAllPermissions(
+  userPermissions: string[] | undefined,
+  required?: string[]
+): boolean {
+  if (!required || required.length === 0) return true;
+  if (!userPermissions || userPermissions.length === 0) return false;
+  return required.every((perm) => userPermissions.includes(perm));
+}
+
+export function AuthGuard({
+  children,
+  requiredPermissions,
+  requireAnyPermissions,
+}: AuthGuardProps) {
   const router = useRouter();
   const { user, isInitialized } = useSelector((state: RootState) => state.auth);
 
@@ -53,6 +77,34 @@ export function AuthGuard({ children }: AuthGuardProps) {
             className="rounded-lg border border-slate-200 px-4 py-2.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
           >
             Create New Store
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const isAuthorized =
+    hasAllPermissions(user.permissions, requiredPermissions) &&
+    hasAnyPermission(user.permissions, requireAnyPermissions);
+
+  if (!isAuthorized) {
+    const fallbackHref = user.permissions?.includes('sale:create') ? '/pos' : '/dashboard';
+    return (
+      <div className="mx-auto my-12 max-w-md rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-rose-50 text-rose-600">
+          <ShieldAlert className="h-6 w-6" />
+        </div>
+        <h2 className="mt-4 text-lg font-bold text-slate-900">Access Restricted</h2>
+        <p className="mt-1.5 text-xs text-slate-500">
+          Your current role ({user.roles?.join(', ') || 'Staff'}) does not have permission to view this page.
+        </p>
+        <div className="mt-6">
+          <Link
+            href={fallbackHref}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-slate-800"
+          >
+            <span>Go to Allowed Workspace</span>
+            <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </div>

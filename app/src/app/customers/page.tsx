@@ -19,6 +19,7 @@ import {
   useCollectDueMutation,
   type CustomerResponse,
 } from '@/store/customerApi';
+import { Permission } from '@dokani/shared';
 import { AuthGuard } from '@/components/auth-guard';
 
 export default function CustomersPage() {
@@ -126,7 +127,7 @@ export default function CustomersPage() {
   };
 
   return (
-    <AuthGuard>
+    <AuthGuard requireAnyPermissions={[Permission.CUSTOMER_VIEW]}>
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
       {/* Header and Stats */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

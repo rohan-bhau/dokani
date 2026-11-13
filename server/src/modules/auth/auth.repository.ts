@@ -1,4 +1,4 @@
-import { Permission, SystemRole } from '@dokani/shared';
+import { Permission, ROLE_DEFAULT_PERMISSIONS, SystemRole } from '@dokani/shared';
 import type { Tenant, User } from '../../config/prisma.js';
 import { prisma } from '../../config/prisma.js';
 
@@ -33,24 +33,33 @@ export class AuthRepository {
           skipDuplicates: true,
         });
 
-        const tenantPermissions = await tx.permission.findMany({
-          where: { code: { not: Permission.PLATFORM_MANAGE } },
-          select: { id: true },
+        const allPermissions = await tx.permission.findMany({
+          select: { id: true, code: true },
         });
+        const permIdByCode = new Map(allPermissions.map((p) => [p.code, p.id]));
 
-        // Create owner role for this tenant
-        const ownerRole = await tx.role.create({
-          data: {
-            name: SystemRole.OWNER,
-            tenantId: tenant.id,
-            isSystem: true,
-            rolePermissions: {
-              create: tenantPermissions.map((perm) => ({
-                permissionId: perm.id,
-              })),
+        // Create default system roles for this tenant with least-privilege permissions
+        let ownerRoleId = '';
+        for (const [roleName, permCodes] of Object.entries(ROLE_DEFAULT_PERMISSIONS)) {
+          const permIds = permCodes
+            .map((code) => permIdByCode.get(code))
+            .filter((id): id is string => Boolean(id));
+
+          const createdRole = await tx.role.create({
+            data: {
+              name: roleName,
+              tenantId: tenant.id,
+              isSystem: true,
+              rolePermissions: {
+                create: permIds.map((permissionId) => ({ permissionId })),
+              },
             },
-          },
-        });
+          });
+
+          if (roleName === SystemRole.OWNER) {
+            ownerRoleId = createdRole.id;
+          }
+        }
 
       // Create owner user
       const user = await tx.user.create({
@@ -62,7 +71,7 @@ export class AuthRepository {
           passwordHash: params.passwordHash,
           userRoles: {
             create: {
-              roleId: ownerRole.id,
+              roleId: ownerRoleId,
             },
           },
         },

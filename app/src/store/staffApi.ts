@@ -6,14 +6,9 @@ export interface StaffMember {
   phone: string;
   email: string | null;
   isActive: boolean;
-  language: string;
-  userRoles: Array<{
-    role: {
-      id: string;
-      name: string;
-      isSystem: boolean;
-    };
-  }>;
+  lastLoginAt: string | null;
+  role: string;
+  roleId?: string;
   createdAt: string;
 }
 
@@ -24,10 +19,8 @@ export interface StaffInvitation {
   status: 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'CANCELLED';
   expiresAt: string;
   createdAt: string;
-  role: {
-    id: string;
-    name: string;
-  };
+  role: string;
+  roleId: string;
 }
 
 export interface RolePermissionItem {
@@ -37,15 +30,23 @@ export interface RolePermissionItem {
   permissions: string[];
 }
 
+export interface RolePermissionMatrixResponse {
+  roles: RolePermissionItem[];
+  allPermissions: Array<{
+    id: string;
+    code: string;
+    description?: string | null;
+  }>;
+}
+
 export const staffApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getStaffList: builder.query<
       {
         success: boolean;
         data: {
-          staff: StaffMember[];
+          users: StaffMember[];
           invitations: StaffInvitation[];
-          roles: Array<{ id: string; name: string }>;
         };
       },
       void
@@ -55,7 +56,18 @@ export const staffApi = baseApi.injectEndpoints({
     }),
 
     inviteStaff: builder.mutation<
-      { success: boolean; message: string; invitation: StaffInvitation },
+      {
+        success: boolean;
+        message: string;
+        data: {
+          invitationId: string;
+          inviteUrl: string;
+          name: string;
+          emailOrPhone: string;
+          role: string;
+          expiresAt: string;
+        };
+      },
       { name: string; phoneOrEmail: string; roleId: string }
     >({
       query: (body) => ({
@@ -90,7 +102,7 @@ export const staffApi = baseApi.injectEndpoints({
     }),
 
     getRolePermissions: builder.query<
-      { success: boolean; data: RolePermissionItem[] },
+      { success: boolean; data: RolePermissionMatrixResponse },
       void
     >({
       query: () => '/staff/roles/permissions',

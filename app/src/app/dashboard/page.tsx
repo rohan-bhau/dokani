@@ -20,6 +20,7 @@ import {
   Package,
   Download,
 } from 'lucide-react';
+import { Permission } from '@dokani/shared';
 import { AuthGuard } from '@/components/auth-guard';
 import {
   useGetSummaryQuery,
@@ -158,7 +159,7 @@ export default function DashboardPage() {
   const totalTenderRevenue = summary?.sales.totalRevenue || 0;
 
   return (
-    <AuthGuard>
+    <AuthGuard requireAnyPermissions={[Permission.REPORT_VIEW_OWN, Permission.REPORT_VIEW_ALL]}>
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:px-8">
         {/* Top Header & Filter Bar */}
         <div className="flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-center sm:justify-between">

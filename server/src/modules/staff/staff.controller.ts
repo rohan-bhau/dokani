@@ -1,3 +1,4 @@
+import { acceptInviteSchema } from '@dokani/shared';
 import type { NextFunction, Request, Response } from 'express';
 import { getRequestContext } from '../../common/context.js';
 import { staffService, type StaffService } from './staff.service.js';
@@ -110,6 +111,34 @@ export class StaffController {
         success: true,
         statusCode: 200,
         message: 'Role permissions updated successfully.',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getInvitationDetails = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await this.service.getInvitationDetails(req.params.token as string);
+      res.status(200).json({
+        success: true,
+        statusCode: 200,
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  acceptInvitation = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsedBody = acceptInviteSchema.parse(req.body);
+      const result = await this.service.acceptInvitation(req.params.token as string, parsedBody);
+      res.status(201).json({
+        success: true,
+        statusCode: 201,
+        message: 'Account activated successfully. You can now sign in.',
         data: result,
       });
     } catch (err) {

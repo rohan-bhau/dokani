@@ -23,7 +23,10 @@ import { ProductTable } from '@/components/products/product-table';
 import { ProductModal } from '@/components/products/product-modal';
 import { StockAdjustModal } from '@/components/products/stock-adjust-modal';
 import { CsvUploadModal } from '@/components/products/csv-upload-modal';
-import { AuthGuard } from '@/components/auth-guard';
+import { Permission } from '@dokani/shared';
+import { useSelector } from 'react-redux';
+import type { RootState } from '@/store';
+import { AuthGuard, hasAnyPermission } from '@/components/auth-guard';
 
 export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,8 +52,18 @@ export default function ProductsPage() {
     limit: viewMode === 'grouped' ? 100 : 15,
   });
 
-  const { data: valuationData } = useGetStockValuationQuery();
-  const { data: lowStockData } = useGetLowStockAlertsQuery();
+  const currentUser = useSelector((state: RootState) => state.auth.user);
+  const canViewStock = hasAnyPermission(currentUser?.permissions, [
+    Permission.STOCK_VIEW,
+    Permission.REPORT_VIEW_ALL,
+  ]);
+
+  const { data: valuationData } = useGetStockValuationQuery(undefined, {
+    skip: !canViewStock,
+  });
+  const { data: lowStockData } = useGetLowStockAlertsQuery(undefined, {
+    skip: !canViewStock,
+  });
 
   const products = productsData?.data.products ?? [];
   const total = productsData?.data.total ?? 0;
@@ -107,7 +120,7 @@ export default function ProductsPage() {
   };
 
   return (
-    <AuthGuard>
+    <AuthGuard requireAnyPermissions={[Permission.PRODUCT_VIEW]}>
       <div className="mx-auto max-w-7xl w-full px-4 py-6 sm:px-6 md:px-8 space-y-6">
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">

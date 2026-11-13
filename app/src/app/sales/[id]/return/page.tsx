@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { Permission } from '@dokani/shared';
 import { AuthGuard } from '@/components/auth-guard';
 import { useGetSaleByIdQuery, useProcessReturnMutation } from '@/store/salesApi';
 
@@ -91,7 +92,7 @@ export default function SaleReturnPage() {
 
   if (isLoading || !invoice) {
     return (
-      <AuthGuard>
+      <AuthGuard requireAnyPermissions={[Permission.SALE_RETURN, Permission.SALE_VOID]}>
         <div className="flex items-center justify-center p-8">
           <p className="text-sm text-slate-500">Loading invoice items...</p>
         </div>
@@ -100,7 +101,7 @@ export default function SaleReturnPage() {
   }
 
   return (
-    <AuthGuard>
+    <AuthGuard requireAnyPermissions={[Permission.SALE_RETURN, Permission.SALE_VOID]}>
       <div className="max-w-3xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         <div className="flex items-center gap-3">
 

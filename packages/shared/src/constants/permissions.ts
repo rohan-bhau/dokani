@@ -2,6 +2,7 @@ export const SystemRole = {
   OWNER: 'OWNER',
   MANAGER: 'MANAGER',
   CASHIER: 'CASHIER',
+  INVENTORY_CLERK: 'INVENTORY_CLERK',
   PLATFORM_ADMIN: 'PLATFORM_ADMIN',
 } as const;
 
@@ -35,3 +36,54 @@ export const Permission = {
 } as const;
 
 export type PermissionType = (typeof Permission)[keyof typeof Permission];
+
+const ALL_TENANT_PERMISSIONS: PermissionType[] = Object.values(Permission).filter(
+  (code) => code !== Permission.PLATFORM_MANAGE
+);
+
+export const ROLE_DEFAULT_PERMISSIONS: Record<
+  Exclude<SystemRoleType, 'PLATFORM_ADMIN'>,
+  PermissionType[]
+> = {
+  OWNER: ALL_TENANT_PERMISSIONS,
+  MANAGER: [
+    Permission.PRODUCT_VIEW,
+    Permission.PRODUCT_CREATE,
+    Permission.PRODUCT_UPDATE,
+    Permission.PRODUCT_DELETE,
+    Permission.STOCK_VIEW,
+    Permission.STOCK_ADJUST,
+    Permission.SUPPLIER_MANAGE,
+    Permission.PURCHASE_MANAGE,
+    Permission.SALE_CREATE,
+    Permission.SALE_VOID,
+    Permission.SALE_RETURN,
+    Permission.SALE_DISCOUNT_HIGH,
+    Permission.STAFF_VIEW,
+    Permission.CUSTOMER_VIEW,
+    Permission.CUSTOMER_MANAGE,
+    Permission.DUE_COLLECT,
+    Permission.REPORT_VIEW_ALL,
+    Permission.REPORT_VIEW_OWN,
+    Permission.AUDIT_LOG_VIEW,
+    Permission.EXPENSE_VIEW,
+    Permission.EXPENSE_MANAGE,
+  ],
+  CASHIER: [
+    Permission.PRODUCT_VIEW,
+    Permission.SALE_CREATE,
+    Permission.CUSTOMER_VIEW,
+    Permission.CUSTOMER_MANAGE,
+    Permission.DUE_COLLECT,
+    Permission.REPORT_VIEW_OWN,
+  ],
+  INVENTORY_CLERK: [
+    Permission.PRODUCT_VIEW,
+    Permission.PRODUCT_CREATE,
+    Permission.PRODUCT_UPDATE,
+    Permission.STOCK_VIEW,
+    Permission.STOCK_ADJUST,
+    Permission.SUPPLIER_MANAGE,
+    Permission.PURCHASE_MANAGE,
+  ],
+};

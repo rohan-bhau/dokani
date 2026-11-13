@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Permission } from '@dokani/shared';
 import { AuthGuard } from '@/components/auth-guard';
 import {
   useGetStaffListQuery,
@@ -39,11 +40,13 @@ export default function StaffPage() {
   const [inviteRoleId, setInviteRoleId] = useState('');
   const [inviteError, setInviteError] = useState('');
   const [inviteSuccessMsg, setInviteSuccessMsg] = useState('');
+  const [generatedInviteUrl, setGeneratedInviteUrl] = useState('');
+  const [copiedInvite, setCopiedInvite] = useState(false);
 
-  const staff = staffData?.data?.staff || [];
+  const staff = staffData?.data?.users || [];
   const invitations = staffData?.data?.invitations || [];
-  const roles = staffData?.data?.roles || [];
-  const rolePermissions = permData?.data || [];
+  const rolePermissions = permData?.data?.roles || [];
+  const assignableRoles = rolePermissions.filter((r) => r.name !== 'OWNER');
 
   const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,15 +65,14 @@ export default function StaffPage() {
         roleId: inviteRoleId,
       }).unwrap();
 
-      setInviteSuccessMsg(res.message || 'Invitation sent successfully!');
-      setTimeout(() => {
-        setIsInviteModalOpen(false);
-        setInviteName('');
-        setInviteContact('');
-        setInviteRoleId('');
-        setInviteSuccessMsg('');
-        refetch();
-      }, 1500);
+      setInviteSuccessMsg(res.message || 'Invitation created! Share this link to join:');
+      if (res.data?.inviteUrl) {
+        setGeneratedInviteUrl(`${window.location.origin}${res.data.inviteUrl}`);
+      }
+      setInviteName('');
+      setInviteContact('');
+      setInviteRoleId('');
+      refetch();
     } catch (err: any) {
       setInviteError(err?.data?.message || 'Failed to send invitation.');
     }
@@ -88,7 +90,7 @@ export default function StaffPage() {
   };
 
   return (
-    <AuthGuard>
+    <AuthGuard requireAnyPermissions={[Permission.STAFF_VIEW, Permission.STAFF_MANAGE]}>
       <div className="max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -170,7 +172,7 @@ export default function StaffPage() {
                             <td className="py-3 px-4">
                               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700">
                                 <KeyRound className="w-3 h-3 text-indigo-500" />
-                                {member.userRoles[0]?.role?.name || 'Staff'}
+                                {member.role || 'Staff'}
                               </span>
                             </td>
                             <td className="py-3 px-4 text-center">
@@ -185,7 +187,7 @@ export default function StaffPage() {
                               </span>
                             </td>
                             <td className="py-3 px-4 text-right">
-                              {member.userRoles[0]?.role?.name !== 'OWNER' && (
+                              {member.role !== 'OWNER' && (
                                 <button
                                   type="button"
                                   onClick={() => handleDeactivate(member.id, member.name)}
@@ -215,7 +217,7 @@ export default function StaffPage() {
                         <div>
                           <p className="font-semibold text-slate-800">{inv.name}</p>
                           <p className="text-xs text-slate-500">
-                            Sent to: {inv.emailOrPhone} &bull; Role: {inv.role?.name}
+                            Sent to: {inv.emailOrPhone} &bull; Role: {inv.role}
                           </p>
                         </div>
                         <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
@@ -338,7 +340,7 @@ export default function StaffPage() {
                       className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs bg-white"
                     >
                       <option value="">-- Choose Role --</option>
-                      {roles.map((r) => (
+                      {assignableRoles.map((r) => (
                         <option key={r.id} value={r.id}>
                           {r.name}
                         </option>
@@ -353,27 +355,57 @@ export default function StaffPage() {
                   )}
 
                   {inviteSuccessMsg && (
-                    <p className="text-xs text-emerald-700 bg-emerald-50 p-2 rounded border border-emerald-200 flex items-center gap-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      {inviteSuccessMsg}
-                    </p>
+                    <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+                      <p className="flex items-center gap-1.5 font-semibold">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>{inviteSuccessMsg}</span>
+                      </p>
+                      {generatedInviteUrl && (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            readOnly
+                            value={generatedInviteUrl}
+                            className="flex-1 rounded border border-emerald-200 bg-white px-2.5 py-1.5 font-mono text-[11px] text-slate-700"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(generatedInviteUrl);
+                              setCopiedInvite(true);
+                              setTimeout(() => setCopiedInvite(false), 2000);
+                            }}
+                            className="shrink-0 rounded bg-emerald-700 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-emerald-800"
+                          >
+                            {copiedInvite ? 'Copied' : 'Copy Link'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   <div className="pt-2 flex justify-end gap-2">
                     <button
                       type="button"
-                      onClick={() => setIsInviteModalOpen(false)}
+                      onClick={() => {
+                        setIsInviteModalOpen(false);
+                        setInviteSuccessMsg('');
+                        setGeneratedInviteUrl('');
+                        setCopiedInvite(false);
+                      }}
                       className="px-4 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50"
                     >
-                      Cancel
+                      {generatedInviteUrl ? 'Done' : 'Cancel'}
                     </button>
-                    <button
-                      type="submit"
-                      disabled={isInviting}
-                      className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold transition disabled:opacity-50"
-                    >
-                      {isInviting ? 'Inviting...' : 'Send Invitation'}
-                    </button>
+                    {!generatedInviteUrl && (
+                      <button
+                        type="submit"
+                        disabled={isInviting}
+                        className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold transition disabled:opacity-50"
+                      >
+                        {isInviting ? 'Inviting...' : 'Send Invitation'}
+                      </button>
+                    )}
                   </div>
                 </form>
               </div>

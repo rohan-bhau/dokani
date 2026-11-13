@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { Permission } from '@dokani/shared';
 import { AuthGuard } from '@/components/auth-guard';
 import { PrintableReceipt } from '@/components/pos/printable-receipt';
 import { useGetSaleByIdQuery, useVoidSaleMutation } from '@/store/salesApi';
@@ -72,7 +73,7 @@ export default function SaleDetailPage() {
 
   if (isLoading || !invoice) {
     return (
-      <AuthGuard>
+      <AuthGuard requireAnyPermissions={[Permission.REPORT_VIEW_OWN, Permission.REPORT_VIEW_ALL]}>
         <div className="max-w-5xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6 animate-pulse">
           <div className="flex items-center justify-between gap-4">
             <div className="h-8 w-64 bg-slate-200 rounded-lg" />
@@ -87,7 +88,7 @@ export default function SaleDetailPage() {
   const paidPayments = invoice.payments?.filter((p) => p.amount > 0) ?? [];
 
   return (
-    <AuthGuard>
+    <AuthGuard requireAnyPermissions={[Permission.REPORT_VIEW_OWN, Permission.REPORT_VIEW_ALL]}>
       <div className="max-w-5xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Header navigation & actions */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">

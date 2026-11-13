@@ -18,6 +18,7 @@ export const acceptInviteSchema = z
   .object({
     password: z.string().min(8, 'Password must be at least 8 characters'),
     confirmPassword: z.string().min(8),
+    phone: z.string().trim().regex(phoneRegex, 'Invalid Bangladeshi mobile number').optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Passwords must match',

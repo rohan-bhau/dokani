@@ -1,3 +1,4 @@
+import { ROLE_DEFAULT_PERMISSIONS } from '@dokani/shared';
 import { prisma } from '../config/prisma.js';
 import { hashPassword } from '../modules/auth/auth.password.js';
 import { formatInvoiceNumber, getShopInvoiceCode } from '../modules/sales/sales.repository.js';
@@ -152,52 +153,37 @@ export async function seedDemoData(): Promise<void> {
       }
     }
 
-    // Setup OWNER and CASHIER roles for this tenant
-    const ownerRole = await prisma.role.upsert({
-      where: { tenantId_name: { tenantId: tenant.id, name: 'OWNER' } },
-      update: {},
-      create: {
-        tenantId: tenant.id,
-        name: 'OWNER',
-        isSystem: true,
-      },
-    });
+    // Setup standard roles (OWNER, MANAGER, CASHIER, INVENTORY_CLERK) with least-privilege permissions
+    const permIdByCode = new Map(allPerms.map((p) => [p.code, p.id]));
+    const tenantRoles = new Map<string, { id: string }>();
 
-    const cashierRole = await prisma.role.upsert({
-      where: { tenantId_name: { tenantId: tenant.id, name: 'CASHIER' } },
-      update: {},
-      create: {
-        tenantId: tenant.id,
-        name: 'CASHIER',
-        isSystem: true,
-      },
-    });
-
-    // Attach all permissions to OWNER
-    for (const p of allPerms) {
-      await prisma.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId: ownerRole.id, permissionId: p.id } },
+    for (const [roleName, permCodes] of Object.entries(ROLE_DEFAULT_PERMISSIONS)) {
+      const role = await prisma.role.upsert({
+        where: { tenantId_name: { tenantId: tenant.id, name: roleName } },
         update: {},
-        create: { roleId: ownerRole.id, permissionId: p.id },
+        create: {
+          tenantId: tenant.id,
+          name: roleName,
+          isSystem: true,
+        },
       });
+      tenantRoles.set(roleName, role);
+
+      const permIds = permCodes
+        .map((code) => permIdByCode.get(code))
+        .filter((id): id is string => Boolean(id));
+
+      for (const permissionId of permIds) {
+        await prisma.rolePermission.upsert({
+          where: { roleId_permissionId: { roleId: role.id, permissionId } },
+          update: {},
+          create: { roleId: role.id, permissionId },
+        });
+      }
     }
 
-    // Attach cashier permissions
-    const cashierPermCodes = [
-      'product:view',
-      'sale:create',
-      'sale:view',
-      'customer:view',
-      'due:collect',
-      'report:view:own',
-    ];
-    for (const p of allPerms.filter((perm) => cashierPermCodes.includes(perm.code))) {
-      await prisma.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId: cashierRole.id, permissionId: p.id } },
-        update: {},
-        create: { roleId: cashierRole.id, permissionId: p.id },
-      });
-    }
+    const ownerRole = tenantRoles.get('OWNER')!;
+    const cashierRole = tenantRoles.get('CASHIER')!;
 
     // Create or update Owner user
     const ownerPhones = [config.ownerPhone];

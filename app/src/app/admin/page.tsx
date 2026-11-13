@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Permission } from '@dokani/shared';
 import { AuthGuard } from '@/components/auth-guard';
 import {
   useGetAdminTenantsQuery,
@@ -67,7 +68,7 @@ export default function AdminPortalPage() {
   };
 
   return (
-    <AuthGuard>
+    <AuthGuard requireAnyPermissions={[Permission.PLATFORM_MANAGE]}>
       <div className="max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6 font-sans">
         {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

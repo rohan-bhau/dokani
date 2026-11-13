@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { Permission } from '@dokani/shared';
 import { AuthGuard } from '@/components/auth-guard';
 import { useGetSuppliersQuery, useCreateSupplierMutation } from '@/store/purchaseApi';
 
@@ -74,7 +75,7 @@ export default function SuppliersPage() {
   };
 
   return (
-    <AuthGuard>
+    <AuthGuard requireAnyPermissions={[Permission.SUPPLIER_MANAGE]}>
       <div className="max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Header */}
 

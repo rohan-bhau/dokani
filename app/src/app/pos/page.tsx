@@ -26,6 +26,7 @@ import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { useSocket } from '@/hooks/useSocket';
 import { CheckoutModal } from '@/components/pos/checkout-modal';
 import { PrintableReceipt } from '@/components/pos/printable-receipt';
+import { Permission } from '@dokani/shared';
 import { AuthGuard } from '@/components/auth-guard';
 import { DokaniLogo, ShopLogo } from '@/components/dokani-logo';
 
@@ -388,7 +389,7 @@ function PosContent() {
   }, [products]);
 
   return (
-    <AuthGuard>
+    <AuthGuard requireAnyPermissions={[Permission.SALE_CREATE]}>
       {toastMessage && (
         <div
           role="status"

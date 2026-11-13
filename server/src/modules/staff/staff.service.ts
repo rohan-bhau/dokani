@@ -1,8 +1,9 @@
 import crypto from 'node:crypto';
 import { staffRepository, type StaffRepository } from './staff.repository.js';
 import { prisma } from '../../config/prisma.js';
-import { BadRequestError, ForbiddenError } from '../../common/errors.js';
-import type { InviteStaffInput, UpdateRolePermissionsInput } from '@dokani/shared';
+import { BadRequestError, ForbiddenError, NotFoundError } from '../../common/errors.js';
+import { hashPassword } from '../auth/auth.password.js';
+import type { AcceptInviteInput, InviteStaffInput, UpdateRolePermissionsInput } from '@dokani/shared';
 
 export class StaffService {
   constructor(private readonly repo: StaffRepository = staffRepository) {}
@@ -85,6 +86,73 @@ export class StaffService {
 
   async updateRolePermissions(tenantId: string, roleId: string, input: UpdateRolePermissionsInput) {
     return this.repo.updateRolePermissions(tenantId, roleId, input.permissionIds);
+  }
+
+  async getInvitationDetails(rawToken: string) {
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const inv = await this.repo.findInvitationByTokenHash(tokenHash);
+
+    if (!inv) {
+      throw new NotFoundError('Invitation link is invalid.');
+    }
+    if (inv.status !== 'PENDING') {
+      throw new BadRequestError('This invitation has already been used or cancelled.');
+    }
+    if (inv.expiresAt < new Date()) {
+      throw new BadRequestError('This invitation link has expired.');
+    }
+
+    const isPhoneInvite = /^01[3-9]\d{8}$/.test(inv.emailOrPhone);
+    return {
+      name: inv.name,
+      emailOrPhone: inv.emailOrPhone,
+      requiresPhoneInput: !isPhoneInvite,
+      roleName: inv.role.name,
+      tenantName: inv.tenant.name,
+      tenantLogoUrl: inv.tenant.logoUrl,
+      expiresAt: inv.expiresAt,
+    };
+  }
+
+  async acceptInvitation(rawToken: string, input: AcceptInviteInput) {
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const inv = await this.repo.findInvitationByTokenHash(tokenHash);
+
+    if (!inv) {
+      throw new NotFoundError('Invitation link is invalid.');
+    }
+    if (inv.status !== 'PENDING') {
+      throw new BadRequestError('This invitation has already been used or cancelled.');
+    }
+    if (inv.expiresAt < new Date()) {
+      throw new BadRequestError('This invitation link has expired.');
+    }
+
+    const isPhoneInvite = /^01[3-9]\d{8}$/.test(inv.emailOrPhone);
+    const phone = isPhoneInvite ? inv.emailOrPhone : input.phone?.trim();
+
+    if (!phone) {
+      throw new BadRequestError('Bangladeshi mobile number is required to activate your login.');
+    }
+
+    const email = inv.emailOrPhone.includes('@') ? inv.emailOrPhone : null;
+    const passwordHash = await hashPassword(input.password);
+
+    const user = await this.repo.acceptInvitation({
+      invitationId: inv.id,
+      tenantId: inv.tenantId,
+      roleId: inv.roleId,
+      name: inv.name,
+      phone,
+      email,
+      passwordHash,
+    });
+
+    return {
+      user,
+      roleName: inv.role.name,
+      tenantName: inv.tenant.name,
+    };
   }
 }
 
