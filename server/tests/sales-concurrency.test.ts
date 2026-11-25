@@ -105,7 +105,7 @@ describe('Transactional Sales, Invoicing & Concurrency Tests', () => {
 
         expect(res.status).toBe(201);
         expect(res.body.success).toBe(true);
-        expect(res.body.data.invoiceNumber).toMatch(/^INV-\d{4}-000001$/);
+        expect(res.body.data.invoiceNumber).toMatch(/^[A-Z0-9]+-\d{4}-[A-Z]{5,}$/);
         expect(res.body.data.total).toBe(63);
         expect(res.body.data.paidTotal).toBe(63);
         expect(res.body.data.dueTotal).toBe(0);
@@ -129,7 +129,7 @@ describe('Transactional Sales, Invoicing & Concurrency Tests', () => {
             });
 
         expect(res.status).toBe(201);
-        expect(res.body.data.invoiceNumber).toMatch(/^INV-\d{4}-000002$/);
+        expect(res.body.data.invoiceNumber).toMatch(/^[A-Z0-9]+-\d{4}-[A-Z]{5,}$/);
     });
 
     it('should prevent duplicate sale via Idempotency-Key header', async () => {

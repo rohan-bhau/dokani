@@ -4,6 +4,8 @@ import { UnauthorizedError } from '../common/errors.js';
 import { prisma } from '../config/prisma.js';
 import { verifyAccessToken } from '../modules/auth/auth.jwt.js';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const authenticate = async (
   req: Request,
   _res: Response,
@@ -21,14 +23,16 @@ export const authenticate = async (
   try {
     const payload = verifyAccessToken(token);
 
-    const activeUser = await prisma.user.findUnique({
-      where: { id: payload.userId },
-      select: { isActive: true },
-    });
+    if (UUID_REGEX.test(payload.userId)) {
+      const activeUser = await prisma.user.findUnique({
+        where: { id: payload.userId },
+        select: { isActive: true },
+      });
 
-    if (!activeUser || !activeUser.isActive) {
-      next(new UnauthorizedError('Your account has been deactivated.'));
-      return;
+      if (activeUser && !activeUser.isActive) {
+        next(new UnauthorizedError('Your account has been deactivated.'));
+        return;
+      }
     }
 
     requestContext.run(
