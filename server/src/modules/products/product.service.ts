@@ -1,5 +1,6 @@
 import type { CreateProductInput, QueryProductInput, UpdateProductInput } from '@dokani/shared';
 import { ConflictError, NotFoundError } from '../../common/errors.js';
+import { prisma } from '../../config/prisma.js';
 import { parseAndValidateProductCsv } from './product.csv.js';
 import { productRepository, type ProductRepository } from './product.repository.js';
 
@@ -82,33 +83,78 @@ export class ProductService {
       };
     }
 
-    // Filter out rows with duplicates within the tenant
+    // Filter out rows with duplicates (against DB and within the same CSV) and resolve category names
     const rowsToInsert: CreateProductInput[] = [];
-    for (let i = 0; i < validRows.length; i++) {
-      const row = validRows[i]!;
-      const existingSku = await this.repo.findBySku(tenantId, row.sku);
-      if (existingSku) {
+    const seenSkus = new Set<string>();
+    const seenBarcodes = new Set<string>();
+    const categoryCache = new Map<string, string>();
+
+    for (const parsedRow of validRows) {
+      const { rowNumber, input, categoryName } = parsedRow;
+      const normalizedSku = input.sku.toLowerCase();
+
+      if (seenSkus.has(normalizedSku)) {
         errors.push({
-          row: i + 2,
-          errors: [`SKU '${row.sku}' already exists.`],
-          data: { sku: row.sku },
+          row: rowNumber,
+          errors: [`Duplicate SKU '${input.sku}' inside CSV file.`],
+          data: { sku: input.sku },
         });
         continue;
       }
 
-      if (row.barcode) {
-        const existingBarcode = await this.repo.findByBarcode(tenantId, row.barcode);
-        if (existingBarcode) {
+      const existingSku = await this.repo.findBySku(tenantId, input.sku);
+      if (existingSku) {
+        errors.push({
+          row: rowNumber,
+          errors: [`SKU '${input.sku}' already exists.`],
+          data: { sku: input.sku },
+        });
+        continue;
+      }
+
+      if (input.barcode) {
+        const normalizedBarcode = input.barcode.toLowerCase();
+        if (seenBarcodes.has(normalizedBarcode)) {
           errors.push({
-            row: i + 2,
-            errors: [`Barcode '${row.barcode}' already exists.`],
-            data: { barcode: row.barcode },
+            row: rowNumber,
+            errors: [`Duplicate barcode '${input.barcode}' inside CSV file.`],
+            data: { barcode: input.barcode },
           });
           continue;
         }
+
+        const existingBarcode = await this.repo.findByBarcode(tenantId, input.barcode);
+        if (existingBarcode) {
+          errors.push({
+            row: rowNumber,
+            errors: [`Barcode '${input.barcode}' already exists.`],
+            data: { barcode: input.barcode },
+          });
+          continue;
+        }
+        seenBarcodes.add(normalizedBarcode);
       }
 
-      rowsToInsert.push(row);
+      seenSkus.add(normalizedSku);
+
+      if (!input.categoryId && categoryName) {
+        const catKey = categoryName.trim().toLowerCase();
+        const cachedId = categoryCache.get(catKey);
+        if (cachedId) {
+          input.categoryId = cachedId;
+        } else {
+          const cat = await prisma.category.upsert({
+            where: { tenantId_name: { tenantId, name: categoryName.trim() } },
+            update: {},
+            create: { tenantId, name: categoryName.trim() },
+            select: { id: true },
+          });
+          categoryCache.set(catKey, cat.id);
+          input.categoryId = cat.id;
+        }
+      }
+
+      rowsToInsert.push(input);
     }
 
     const created =

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { X, Upload, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { X, Upload, Loader2, CheckCircle, AlertTriangle, Download } from 'lucide-react';
 import { useImportProductsCsvMutation, type CsvImportResult } from '@/store/productApi';
 
 interface CsvUploadModalProps {
@@ -9,18 +9,23 @@ interface CsvUploadModalProps {
   onClose: () => void;
 }
 
-const SAMPLE_CSV = `name,nameBn,sku,barcode,unit,costPrice,sellPrice,vatRate,reorderLevel,initialStock
-Teer Soybean Oil 5L,তীর সয়াবিন তেল ৫ লিটার,OIL-TEER-5L,8941100001,bottle,750,820,0,10,50
-Aci Pure Salt 1kg,এসিআই লবণ ১ কেজি,SALT-ACI-1K,8941100002,packet,35,42,0,20,100
-Pran Mustard Oil 250ml,প্রাণ সরিষার তেল ২৫০ মি.লি.,OIL-PRAN-250,,bottle,80,95,0,5,30`;
+const CSV_HEADER = `name,nameBn,sku,barcode,category,unit,costPrice,sellPrice,vatRate,reorderLevel,initialStock`;
 
 export function CsvUploadModal({ isOpen, onClose }: CsvUploadModalProps) {
   const [importCsv, { isLoading }] = useImportProductsCsvMutation();
-  const [csvContent, setCsvContent] = useState(SAMPLE_CSV);
+  const [csvContent, setCsvContent] = useState('');
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [copiedHeader, setCopiedHeader] = useState(false);
   const [result, setResult] = useState<CsvImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   if (!isOpen) return null;
+
+  const hasHeaderRow = (text: string): boolean => {
+    const firstLine = text.trim().split(/\r?\n/, 1)[0]?.toLowerCase() ?? '';
+    return firstLine.includes('sku') && (firstLine.includes('name') || firstLine.includes('product'));
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -28,14 +33,28 @@ export function CsvUploadModal({ isOpen, onClose }: CsvUploadModalProps) {
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      const text = event.target?.result as string;
-      if (text) {
-        setCsvContent(text);
+      const text = event.target?.result;
+      if (typeof text === 'string') {
+        setCsvContent(text.replace(/^\uFEFF/, ''));
+        setSelectedFileName(file.name);
         setResult(null);
         setError(null);
       }
     };
-    reader.readAsText(file);
+    reader.readAsText(file, 'UTF-8');
+    e.target.value = '';
+  };
+
+  const handleDownloadSample = () => {
+    const blob = new Blob(['\uFEFF' + CSV_HEADER + '\n'], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'dokani-products-template.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleImport = async () => {
@@ -48,7 +67,10 @@ export function CsvUploadModal({ isOpen, onClose }: CsvUploadModalProps) {
     setResult(null);
 
     try {
-      const res = await importCsv({ csvData: csvContent }).unwrap();
+      const payloadCsv = hasHeaderRow(csvContent)
+        ? csvContent
+        : `${CSV_HEADER}\n${csvContent.trim()}`;
+      const res = await importCsv({ csvData: payloadCsv }).unwrap();
       setResult(res.data);
     } catch (err: unknown) {
       const errorMsg =
@@ -121,11 +143,12 @@ export function CsvUploadModal({ isOpen, onClose }: CsvUploadModalProps) {
             <label className="block text-xs font-medium text-slate-700 mb-1">
               Upload CSV File or Paste Raw CSV Data
             </label>
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex flex-wrap items-center gap-3 mb-2">
               <label className="cursor-pointer inline-flex items-center gap-1.5 rounded border border-border bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 focus-within:ring-2 focus-within:ring-brand">
                 <Upload className="h-3.5 w-3.5 text-slate-500" />
-                <span>Choose .csv file</span>
+                <span>{selectedFileName ? `File: ${selectedFileName}` : 'Choose .csv file'}</span>
                 <input
+                  ref={fileInputRef}
                   type="file"
                   accept=".csv,text/csv"
                   className="sr-only"
@@ -134,28 +157,57 @@ export function CsvUploadModal({ isOpen, onClose }: CsvUploadModalProps) {
               </label>
               <button
                 type="button"
-                onClick={() => setCsvContent(SAMPLE_CSV)}
-                className="text-xs text-brand hover:underline font-medium"
+                onClick={handleDownloadSample}
+                className="inline-flex items-center gap-1 text-xs text-slate-700 hover:text-slate-900 font-medium border border-border rounded px-2.5 py-1.5 bg-white hover:bg-slate-50"
               >
-                Reset to sample format
+                <Download className="h-3.5 w-3.5 text-slate-500" />
+                <span>Download Template</span>
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCsvContent('');
+                  setSelectedFileName(null);
+                  setResult(null);
+                  setError(null);
+                }}
+                className="text-xs text-slate-500 hover:text-slate-800 font-medium"
+              >
+                Clear
+              </button>
+            </div>
+
+            <div className="mb-2 rounded border border-slate-200 bg-slate-50 px-3 py-2">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Expected CSV Header
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(CSV_HEADER);
+                    setCopiedHeader(true);
+                    setTimeout(() => setCopiedHeader(false), 2000);
+                  }}
+                  className="text-[11px] font-medium text-brand hover:underline"
+                >
+                  {copiedHeader ? 'Copied' : 'Copy header'}
+                </button>
+              </div>
+              <p className="font-mono text-[11px] text-slate-700 break-all">{CSV_HEADER}</p>
             </div>
 
             <textarea
               rows={8}
               value={csvContent}
               onChange={(e) => setCsvContent(e.target.value)}
-              placeholder="Paste comma-separated rows here..."
+              placeholder="Paste product rows here (header row is optional if columns follow the order above)..."
               className="block w-full rounded border border-border p-3 text-xs font-mono text-slate-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand bg-slate-50"
             />
           </div>
 
           <div className="text-xs text-slate-500 space-y-1 bg-slate-50 border border-border rounded p-3">
-            <p className="font-semibold text-slate-700">Required CSV Columns:</p>
-            <p className="font-mono text-[11px] text-slate-600">
-              name, nameBn, sku, barcode, unit, costPrice, sellPrice, vatRate, reorderLevel, initialStock
-            </p>
-            <p>SKU must be unique per tenant. Barcode is optional but unique if provided.</p>
+            <p>SKU must be unique per store. Category names are created automatically if new, and UTF-8 Excel CSV files are supported.</p>
           </div>
         </div>
 

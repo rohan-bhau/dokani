@@ -60,8 +60,26 @@ export const authSlice = createSlice({
       }
       state.isInitialized = true;
     },
+    updateTenantInfo: (
+      state,
+      action: PayloadAction<{ name?: string; logoUrl?: string | null }>
+    ) => {
+      if (state.user) {
+        state.user = {
+          ...state.user,
+          tenant: {
+            ...state.user.tenant,
+            ...(action.payload.name !== undefined ? { name: action.payload.name } : {}),
+            ...(action.payload.logoUrl !== undefined ? { logoUrl: action.payload.logoUrl } : {}),
+          },
+        };
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('dokani_user', JSON.stringify(state.user));
+        }
+      }
+    },
   },
 });
 
-export const { setCredentials, logout, initializeFromStorage } = authSlice.actions;
+export const { setCredentials, logout, initializeFromStorage, updateTenantInfo } = authSlice.actions;
 export const authReducer = authSlice.reducer;

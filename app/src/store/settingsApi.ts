@@ -20,8 +20,8 @@ export interface TenantSettings {
   returnApprovalLimit: number;
   defaultCreditLimit: number | null;
   overdueDays: number;
-  subscriptionPlan: string;
-  subscriptionStatus: string;
+  currentPlan?: string;
+  status?: string;
 }
 
 export const settingsApi = baseApi.injectEndpoints({

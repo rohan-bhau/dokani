@@ -18,7 +18,7 @@ export const updateSettingsSchema = z
       .optional()
       .nullable(),
     invoicePrefix: z.string().trim().min(1).max(10).optional(),
-    paperSize: z.enum(['RECEIPT_80MM', 'A4']).optional(),
+    paperSize: z.enum(['RECEIPT_80MM', 'RECEIPT_58MM', 'A4']).optional(),
     receiptFooter: z.string().trim().max(200).optional(),
     showLogoOnInvoice: z.boolean().optional(),
     showBinOnInvoice: z.boolean().optional(),

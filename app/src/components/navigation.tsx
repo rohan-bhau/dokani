@@ -22,7 +22,6 @@ import {
   ShieldCheck,
   TrendingDown,
   Truck,
-  CreditCard,
   UserCheck,
   Building2,
 } from 'lucide-react';
@@ -336,14 +335,6 @@ export function Navigation() {
               >
                 Features
               </Link>
-              <Link
-                href="/pricing"
-                className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${
-                  pathname === '/pricing' ? 'bg-slate-100 text-slate-900 font-semibold' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Pricing
-              </Link>
             </nav>
           )}
         </div>
@@ -420,25 +411,14 @@ export function Navigation() {
                     </div>
 
                     {canManageSettings && (
-                      <>
-                        <Link
-                          href="/settings"
-                          onClick={() => setOpenDropdown(null)}
-                          className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition"
-                        >
-                          <Settings className="h-3.5 w-3.5 text-slate-500" />
-                          <span>Store Settings</span>
-                        </Link>
-
-                        <Link
-                          href="/billing"
-                          onClick={() => setOpenDropdown(null)}
-                          className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition"
-                        >
-                          <CreditCard className="h-3.5 w-3.5 text-slate-500" />
-                          <span>Subscription & Plan</span>
-                        </Link>
-                      </>
+                      <Link
+                        href="/settings"
+                        onClick={() => setOpenDropdown(null)}
+                        className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition"
+                      >
+                        <Settings className="h-3.5 w-3.5 text-slate-500" />
+                        <span>Store Settings</span>
+                      </Link>
                     )}
 
                     <Link
@@ -685,35 +665,19 @@ export function Navigation() {
                 )}
 
                 {canManageSettings && (
-                  <>
-                    <Link
-                      href="/settings"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium ${
-                        pathname.startsWith('/settings') ? 'bg-emerald-50 text-brand font-bold' : 'text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Settings className="h-4 w-4 text-slate-500" />
-                        <span>Store Settings & Printing</span>
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-slate-400" />
-                    </Link>
-
-                    <Link
-                      href="/billing"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium ${
-                        pathname.startsWith('/billing') ? 'bg-emerald-50 text-brand font-bold' : 'text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <CreditCard className="h-4 w-4 text-slate-500" />
-                        <span>Subscription Plan</span>
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-slate-400" />
-                    </Link>
-                  </>
+                  <Link
+                    href="/settings"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium ${
+                      pathname.startsWith('/settings') ? 'bg-emerald-50 text-brand font-bold' : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Settings className="h-4 w-4 text-slate-500" />
+                      <span>Store Settings &amp; Printing</span>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-slate-400" />
+                  </Link>
                 )}
 
                 <Link
@@ -757,14 +721,6 @@ export function Navigation() {
                   className="flex items-center justify-between rounded-lg px-3 py-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
                 >
                   <span>All Features</span>
-                  <ChevronRight className="h-4 w-4 text-slate-400" />
-                </Link>
-                <Link
-                  href="/pricing"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center justify-between rounded-lg px-3 py-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                >
-                  <span>Pricing Plans</span>
                   <ChevronRight className="h-4 w-4 text-slate-400" />
                 </Link>
 

@@ -88,7 +88,15 @@ export class ProductController {
   importCsv = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { tenantId, userId } = getRequestContext();
-      const csvData = typeof req.body === 'string' ? req.body : req.body.csvData;
+      const csvData = typeof req.body === 'string' ? req.body : req.body?.csvData;
+      if (!csvData || typeof csvData !== 'string' || !csvData.trim()) {
+        res.status(400).json({
+          success: false,
+          statusCode: 400,
+          message: 'CSV data is required.',
+        });
+        return;
+      }
       const result = await this.service.importCsv(tenantId, csvData, userId);
 
       res.status(200).json({

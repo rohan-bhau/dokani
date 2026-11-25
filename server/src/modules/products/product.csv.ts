@@ -1,7 +1,13 @@
 import { createProductSchema, type CreateProductInput } from '@dokani/shared';
 
+export interface ParsedCsvProductRow {
+  rowNumber: number;
+  input: CreateProductInput;
+  categoryName?: string;
+}
+
 export interface CsvParseResult {
-  validRows: CreateProductInput[];
+  validRows: ParsedCsvProductRow[];
   errors: Array<{
     row: number;
     errors: string[];
@@ -9,15 +15,34 @@ export interface CsvParseResult {
   }>;
 }
 
+function normalizeHeader(header: string): string {
+  return header
+    .replace(/^\uFEFF/, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+function parseNumericField(raw: string | undefined, fallback: number): number {
+  if (!raw) return fallback;
+  const cleaned = raw.replace(/[৳,\s]/g, '');
+  if (!cleaned) return fallback;
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? Math.round(parsed) : Number.NaN;
+}
+
 export function parseCsvRows(csvText: string): string[][] {
+  const sanitized = csvText.replace(/^\uFEFF/, '');
+  const firstLine = sanitized.split(/\r?\n/, 1)[0] ?? '';
+  const delimiter = !firstLine.includes(',') && firstLine.includes(';') ? ';' : ',';
+
   const rows: string[][] = [];
   let currentRow: string[] = [];
   let currentField = '';
   let insideQuotes = false;
 
-  for (let i = 0; i < csvText.length; i++) {
-    const char = csvText[i];
-    const nextChar = csvText[i + 1];
+  for (let i = 0; i < sanitized.length; i++) {
+    const char = sanitized[i];
+    const nextChar = sanitized[i + 1];
 
     if (insideQuotes) {
       if (char === '"' && nextChar === '"') {
@@ -31,7 +56,7 @@ export function parseCsvRows(csvText: string): string[][] {
     } else {
       if (char === '"') {
         insideQuotes = true;
-      } else if (char === ',') {
+      } else if (char === delimiter) {
         currentRow.push(currentField.trim());
         currentField = '';
       } else if (char === '\r') {
@@ -79,8 +104,8 @@ export function parseAndValidateProductCsv(csvContent: string): CsvParseResult {
     return { validRows: [], errors: [] };
   }
 
-  const headers = headerRow.map((h) => h.toLowerCase().trim());
-  const validRows: CreateProductInput[] = [];
+  const headers = headerRow.map(normalizeHeader);
+  const validRows: ParsedCsvProductRow[] = [];
   const errors: CsvParseResult['errors'] = [];
 
   for (let index = 0; index < dataRows.length; index++) {
@@ -91,21 +116,35 @@ export function parseAndValidateProductCsv(csvContent: string): CsvParseResult {
     const rowRecord: Record<string, string> = {};
 
     headers.forEach((header, colIndex) => {
-      rowRecord[header] = row[colIndex] ?? '';
+      if (header) {
+        rowRecord[header] = row[colIndex] ?? '';
+      }
     });
 
+    const name = rowRecord.name || rowRecord.productname || rowRecord.nameenglish || '';
+    const nameBn = rowRecord.namebn || rowRecord.banglaname || rowRecord.namebangla || undefined;
+    const sku = rowRecord.sku || rowRecord.skucode || '';
+    const barcode = rowRecord.barcode || undefined;
+    const categoryName = rowRecord.category || rowRecord.categoryname || undefined;
+
     const candidate: Record<string, unknown> = {
-      name: rowRecord.name,
-      nameBn: rowRecord.namebn || undefined,
-      sku: rowRecord.sku,
-      barcode: rowRecord.barcode || undefined,
+      name,
+      nameBn,
+      sku,
+      barcode,
       categoryId: rowRecord.categoryid || undefined,
-      unit: rowRecord.unit || 'pcs',
-      costPrice: rowRecord.costprice ? Number(rowRecord.costprice) : 0,
-      sellPrice: rowRecord.sellprice ? Number(rowRecord.sellprice) : 0,
-      vatRate: rowRecord.vatrate ? Number(rowRecord.vatrate) : 0,
-      reorderLevel: rowRecord.reorderlevel ? Number(rowRecord.reorderlevel) : 5,
-      initialStock: rowRecord.initialstock ? Number(rowRecord.initialstock) : 0,
+      unit: rowRecord.unit || rowRecord.unitofmeasure || 'pcs',
+      costPrice: parseNumericField(rowRecord.costprice ?? rowRecord.cost, 0),
+      sellPrice: parseNumericField(
+        rowRecord.sellprice ?? rowRecord.sellingprice ?? rowRecord.price,
+        0
+      ),
+      vatRate: parseNumericField(rowRecord.vatrate ?? rowRecord.vat, 0),
+      reorderLevel: parseNumericField(rowRecord.reorderlevel ?? rowRecord.reorderthreshold, 5),
+      initialStock: parseNumericField(
+        rowRecord.initialstock ?? rowRecord.openingstock ?? rowRecord.stock,
+        0
+      ),
     };
 
     const parsed = createProductSchema.safeParse(candidate);
@@ -117,7 +156,11 @@ export function parseAndValidateProductCsv(csvContent: string): CsvParseResult {
         data: rowRecord,
       });
     } else {
-      validRows.push(parsed.data);
+      validRows.push({
+        rowNumber: rowNum,
+        input: parsed.data,
+        ...(categoryName ? { categoryName } : {}),
+      });
     }
   }
 
