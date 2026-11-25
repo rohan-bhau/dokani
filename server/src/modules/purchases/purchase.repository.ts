@@ -19,6 +19,7 @@ export class PurchaseRepository {
         phone: input.phone,
         email: input.email ?? null,
         address: input.address ?? null,
+        openingPayable: BigInt(input.openingPayable ?? 0),
       },
     });
   }

@@ -29,8 +29,8 @@ export default function ExpensesPage() {
 
   const { data, isLoading } = useGetExpensesQuery({
     category: selectedCategory || undefined,
-    startDate: startDate || undefined,
-    endDate: endDate || undefined,
+    startDate: startDate ? new Date(`${startDate}T00:00:00.000Z`).toISOString() : undefined,
+    endDate: endDate ? new Date(`${endDate}T23:59:59.999Z`).toISOString() : undefined,
     page,
     limit: 20,
   });
@@ -39,21 +39,18 @@ export default function ExpensesPage() {
   const [deleteExpense] = useDeleteExpenseMutation();
 
   // Modal form
-  const [category, setCategory] = useState('UTILITIES');
+  const [category, setCategory] = useState('ELECTRICITY');
   const [amount, setAmount] = useState(0);
   const [spentOn, setSpentOn] = useState(new Date().toISOString().slice(0, 10));
-  const [notes, setNotes] = useState('');
+  const [note, setNote] = useState('');
   const [formError, setFormError] = useState('');
 
-  const expenses = data?.data?.expenses || [];
+  const expenses = data?.data?.items || [];
   const total = data?.data?.total || 0;
   const totalPages = data?.data?.totalPages || 1;
 
-  const formatBdt = (paisas: number) => {
-    return (paisas / 100).toLocaleString('en-BD', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+  const formatBdt = (amount: number) => {
+    return Math.round(amount).toLocaleString('en-BD');
   };
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
@@ -68,14 +65,14 @@ export default function ExpensesPage() {
     try {
       await createExpense({
         category,
-        amount: Math.round(amount * 100), // convert to paisa
+        amount: Math.round(amount),
         spentOn: new Date(spentOn).toISOString(),
-        notes: notes.trim() || undefined,
+        note: note.trim() || undefined,
       }).unwrap();
 
       setIsModalOpen(false);
       setAmount(0);
-      setNotes('');
+      setNote('');
     } catch (err: any) {
       setFormError(err?.data?.message || 'Failed to record expense.');
     }
@@ -133,12 +130,13 @@ export default function ExpensesPage() {
                 className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-white"
               >
                 <option value="">All Categories</option>
-                <option value="RENT">Rent & Lease</option>
-                <option value="UTILITIES">Electricity & Internet</option>
+                <option value="RENT">Rent &amp; Lease</option>
+                <option value="ELECTRICITY">Electricity &amp; Utilities</option>
                 <option value="SALARY">Staff Salaries</option>
-                <option value="SUPPLIES">Packaging & Bags</option>
-                <option value="MAINTENANCE">Repairs & Maintenance</option>
-                <option value="TRANSPORT">Freight & Delivery</option>
+                <option value="TRANSPORT">Freight &amp; Delivery</option>
+                <option value="MAINTENANCE">Repairs &amp; Maintenance</option>
+                <option value="ENTERTAINMENT">Tea &amp; Entertainment</option>
+                <option value="MARKETING">Marketing &amp; Ads</option>
                 <option value="OTHER">Other Expenses</option>
               </select>
 
@@ -217,7 +215,7 @@ export default function ExpensesPage() {
                           </span>
                         </td>
                         <td className="py-3 px-4 text-xs text-slate-600">
-                          {exp.notes || '-'}
+                          {exp.note || '-'}
                         </td>
                         <td className="py-3 px-4 text-right font-mono font-bold text-rose-700">
                           ৳{formatBdt(exp.amount)}
@@ -281,12 +279,13 @@ export default function ExpensesPage() {
                       onChange={(e) => setCategory(e.target.value)}
                       className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-medium bg-white"
                     >
-                      <option value="UTILITIES">Electricity & Internet</option>
-                      <option value="RENT">Rent & Lease</option>
+                      <option value="ELECTRICITY">Electricity &amp; Utilities</option>
+                      <option value="RENT">Rent &amp; Lease</option>
                       <option value="SALARY">Staff Salaries</option>
-                      <option value="SUPPLIES">Packaging & Bags</option>
-                      <option value="MAINTENANCE">Repairs & Maintenance</option>
-                      <option value="TRANSPORT">Freight & Delivery</option>
+                      <option value="TRANSPORT">Freight &amp; Delivery</option>
+                      <option value="MAINTENANCE">Repairs &amp; Maintenance</option>
+                      <option value="ENTERTAINMENT">Tea &amp; Entertainment</option>
+                      <option value="MARKETING">Marketing &amp; Ads</option>
                       <option value="OTHER">Other Expenses</option>
                     </select>
                   </div>
@@ -326,8 +325,8 @@ export default function ExpensesPage() {
                       Remarks / Details
                     </label>
                     <textarea
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
                       placeholder="e.g. DESCO electricity bill for October"
                       rows={2}
                       className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs"

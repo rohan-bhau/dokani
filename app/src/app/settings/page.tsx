@@ -62,7 +62,7 @@ export default function SettingsPage() {
         pricesIncludeVat: s.pricesIncludeVat ?? false,
         allowNegativeStock: s.allowNegativeStock ?? false,
         maxCashierDiscount: s.maxCashierDiscount ?? 5,
-        returnApprovalLimit: s.returnApprovalLimit ? s.returnApprovalLimit / 100 : 2000,
+        returnApprovalLimit: s.returnApprovalLimit ? Math.round(s.returnApprovalLimit) : 2000,
         overdueDays: s.overdueDays ?? 15,
       });
     }
@@ -92,7 +92,7 @@ export default function SettingsPage() {
         pricesIncludeVat: formData.pricesIncludeVat,
         allowNegativeStock: formData.allowNegativeStock,
         maxCashierDiscount: formData.maxCashierDiscount,
-        returnApprovalLimit: formData.returnApprovalLimit * 100, // convert to paisa
+        returnApprovalLimit: Math.round(formData.returnApprovalLimit),
         overdueDays: formData.overdueDays,
       }).unwrap();
 

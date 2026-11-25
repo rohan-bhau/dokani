@@ -66,7 +66,7 @@ export default function CustomerDetailPage({ params }: CustomerDetailPageProps) 
     }
 
     try {
-      const amountPoisha = Math.round(amountNum * 100);
+      const amountPoisha = Math.round(amountNum);
       await collectDue({
         customerId: id,
         data: {
@@ -201,7 +201,7 @@ export default function CustomerDetailPage({ params }: CustomerDetailPageProps) 
                 Outstanding Due Balance
               </span>
               <div className="text-2xl font-black text-red-600">
-                BDT {(customer.dueBalance / 100).toLocaleString('en-BD', { minimumFractionDigits: 2 })}
+                BDT {Math.round(customer.dueBalance).toLocaleString('en-BD')}
               </div>
             </div>
             {customer.dueBalance > 0 && (
@@ -289,11 +289,11 @@ export default function CustomerDetailPage({ params }: CustomerDetailPageProps) 
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-bold">
                       <span className={isDebit ? 'text-red-600' : 'text-emerald-600'}>
                         {isDebit ? '+' : '-'} BDT{' '}
-                        {(entry.amount / 100).toLocaleString('en-BD', { minimumFractionDigits: 2 })}
+                        {Math.round(entry.amount).toLocaleString('en-BD')}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-slate-900">
-                      BDT {(entry.balanceAfter / 100).toLocaleString('en-BD', { minimumFractionDigits: 2 })}
+                      BDT {Math.round(entry.balanceAfter).toLocaleString('en-BD')}
                     </td>
                     <td className="px-6 py-4 text-xs text-slate-500 max-w-sm truncate">
                       {entry.notes || '-'}
@@ -326,7 +326,7 @@ export default function CustomerDetailPage({ params }: CustomerDetailPageProps) 
             <div className="mt-4 rounded-md bg-slate-50 p-3 border border-slate-200 text-xs">
               <span className="text-slate-500">Current Outstanding Due: </span>
               <span className="font-bold text-red-600">
-                BDT {(customer.dueBalance / 100).toLocaleString('en-BD', { minimumFractionDigits: 2 })}
+                BDT {Math.round(customer.dueBalance).toLocaleString('en-BD')}
               </span>
             </div>
 

@@ -31,9 +31,8 @@ import {
 
 type DatePreset = 'TODAY' | 'WEEK' | 'MONTH' | 'ALL';
 
-function formatPaisa(amountInPaisa: number): string {
-  const bdt = amountInPaisa / 100;
-  return `৳${bdt.toLocaleString('en-BD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function formatPaisa(amount: number): string {
+  return `৳${Math.round(amount).toLocaleString('en-BD')}`;
 }
 
 export default function DashboardPage() {
@@ -120,23 +119,23 @@ export default function DashboardPage() {
     if (!summary) return;
     const headers = ['Report Category', 'Metric', 'Value'];
     const rows: Array<[string, string, string | number]> = [
-      ['Sales & Revenue', 'Total Revenue (BDT)', (summary.sales.totalRevenue / 100).toFixed(2)],
+      ['Sales & Revenue', 'Total Revenue (BDT)', Math.round(summary.sales.totalRevenue)],
       ['Sales & Revenue', 'Total Completed Invoices', summary.sales.totalInvoices],
-      ['Sales & Revenue', 'Cost of Goods Sold - COGS (BDT)', (summary.sales.cogs / 100).toFixed(2)],
-      ['Sales & Revenue', 'Gross Profit (BDT)', (summary.sales.grossProfit / 100).toFixed(2)],
-      ['Sales & Revenue', 'Total VAT (BDT)', ((summary.sales.totalVat ?? 0) / 100).toFixed(2)],
-      ['Sales & Revenue', 'Total Discounts (BDT)', ((summary.sales.totalDiscount ?? 0) / 100).toFixed(2)],
-      ['Customer Receivables', 'Total Outstanding Baki (BDT)', (summary.receivables.totalOutstandingDue / 100).toFixed(2)],
+      ['Sales & Revenue', 'Cost of Goods Sold - COGS (BDT)', Math.round(summary.sales.cogs)],
+      ['Sales & Revenue', 'Gross Profit (BDT)', Math.round(summary.sales.grossProfit)],
+      ['Sales & Revenue', 'Total VAT (BDT)', Math.round(summary.sales.totalVat ?? 0)],
+      ['Sales & Revenue', 'Total Discounts (BDT)', Math.round(summary.sales.totalDiscount ?? 0)],
+      ['Customer Receivables', 'Total Outstanding Baki (BDT)', Math.round(summary.receivables.totalOutstandingDue)],
       ['Customer Receivables', 'Customers with Due', summary.receivables.totalCustomersWithDue],
       ['Inventory Assets', 'Total Active Products', summary.inventory.totalProducts],
       ['Inventory Assets', 'Total Stock Units On Hand', summary.inventory.totalStockUnits],
-      ['Inventory Assets', 'Inventory Cost Valuation (BDT)', (summary.inventory.totalCostValuation / 100).toFixed(2)],
-      ['Inventory Assets', 'Retail Sales Potential (BDT)', (summary.inventory.totalRetailValuation / 100).toFixed(2)],
-      ['Tender Breakdown', 'Cash (BDT)', (summary.sales.tenderBreakdown.CASH / 100).toFixed(2)],
-      ['Tender Breakdown', 'bKash (BDT)', (summary.sales.tenderBreakdown.BKASH / 100).toFixed(2)],
-      ['Tender Breakdown', 'Nagad (BDT)', (summary.sales.tenderBreakdown.NAGAD / 100).toFixed(2)],
-      ['Tender Breakdown', 'Card (BDT)', (summary.sales.tenderBreakdown.CARD / 100).toFixed(2)],
-      ['Tender Breakdown', 'Credit Baki (BDT)', (summary.sales.tenderBreakdown.CREDIT_BAKI / 100).toFixed(2)],
+      ['Inventory Assets', 'Inventory Cost Valuation (BDT)', Math.round(summary.inventory.totalCostValuation)],
+      ['Inventory Assets', 'Retail Sales Potential (BDT)', Math.round(summary.inventory.totalRetailValuation)],
+      ['Tender Breakdown', 'Cash (BDT)', Math.round(summary.sales.tenderBreakdown.CASH)],
+      ['Tender Breakdown', 'bKash (BDT)', Math.round(summary.sales.tenderBreakdown.BKASH)],
+      ['Tender Breakdown', 'Nagad (BDT)', Math.round(summary.sales.tenderBreakdown.NAGAD)],
+      ['Tender Breakdown', 'Card (BDT)', Math.round(summary.sales.tenderBreakdown.CARD)],
+      ['Tender Breakdown', 'Credit Baki (BDT)', Math.round(summary.sales.tenderBreakdown.CREDIT_BAKI)],
     ];
 
     const csvRows = [

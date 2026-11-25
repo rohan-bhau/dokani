@@ -3,11 +3,10 @@ import { baseApi } from './api';
 export interface Supplier {
   id: string;
   name: string;
-  contactPerson: string | null;
+  company: string | null;
   phone: string;
   email: string | null;
   address: string | null;
-  payableBalance: number;
   openingPayable: number;
   createdAt: string;
 }
@@ -27,21 +26,27 @@ export interface PurchaseItem {
 
 export interface Purchase {
   id: string;
-  poNumber: string;
+  purchaseNumber: string;
   supplierId: string;
   supplier?: Supplier;
-  totalCost: number;
+  status: 'PENDING' | 'RECEIVED' | 'CANCELLED';
+  subtotal: number;
+  total: number;
   paidAmount: number;
+  dueAmount: number;
   notes: string | null;
   createdAt: string;
-  items: PurchaseItem[];
+  _count?: {
+    items: number;
+  };
+  items?: PurchaseItem[];
 }
 
 export const purchaseApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getSuppliers: builder.query<
-      { success: boolean; data: { suppliers: Supplier[]; total: number } },
-      { search?: string; page?: number; limit?: number }
+      { success: boolean; data: { items: Supplier[]; total: number; page: number; limit: number; totalPages: number } },
+      { q?: string; page?: number; limit?: number }
     >({
       query: (params) => ({
         url: '/purchases/suppliers',
@@ -52,7 +57,7 @@ export const purchaseApi = baseApi.injectEndpoints({
 
     createSupplier: builder.mutation<
       { success: boolean; data: Supplier },
-      { name: string; contactPerson?: string; phone: string; email?: string; address?: string; openingPayable?: number }
+      { name: string; company?: string; phone: string; email?: string; address?: string; openingPayable?: number }
     >({
       query: (body) => ({
         url: '/purchases/suppliers',
@@ -63,8 +68,8 @@ export const purchaseApi = baseApi.injectEndpoints({
     }),
 
     getPurchases: builder.query<
-      { success: boolean; data: { purchases: Purchase[]; total: number } },
-      { supplierId?: string; page?: number; limit?: number }
+      { success: boolean; data: { items: Purchase[]; total: number; page: number; limit: number; totalPages: number } },
+      { supplierId?: string; status?: string; page?: number; limit?: number }
     >({
       query: (params) => ({
         url: '/purchases',

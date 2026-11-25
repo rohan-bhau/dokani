@@ -22,25 +22,22 @@ export default function SuppliersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const { data, isLoading } = useGetSuppliersQuery({ search: searchTerm });
+  const { data, isLoading } = useGetSuppliersQuery({ q: searchTerm.trim() || undefined });
   const [createSupplier, { isLoading: isCreating }] = useCreateSupplierMutation();
 
   // Form state
   const [name, setName] = useState('');
-  const [contactPerson, setContactPerson] = useState('');
+  const [company, setCompany] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [openingPayable, setOpeningPayable] = useState(0);
   const [formError, setFormError] = useState('');
 
-  const suppliers = data?.data?.suppliers || [];
+  const suppliers = data?.data?.items || [];
 
-  const formatBdt = (paisas: number) => {
-    return (paisas / 100).toLocaleString('en-BD', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+  const formatBdt = (amount: number) => {
+    return Math.round(amount).toLocaleString('en-BD');
   };
 
   const handleCreateSupplier = async (e: React.FormEvent) => {
@@ -55,16 +52,16 @@ export default function SuppliersPage() {
     try {
       await createSupplier({
         name: name.trim(),
-        contactPerson: contactPerson.trim() || undefined,
+        company: company.trim() || undefined,
         phone: phone.trim(),
         email: email.trim() || undefined,
         address: address.trim() || undefined,
-        openingPayable: openingPayable * 100, // convert BDT to paisa
+        openingPayable: Math.round(openingPayable),
       }).unwrap();
 
       setIsModalOpen(false);
       setName('');
-      setContactPerson('');
+      setCompany('');
       setPhone('');
       setEmail('');
       setAddress('');
@@ -141,10 +138,10 @@ export default function SuppliersPage() {
                   <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-200">
                     <tr>
                       <th className="py-3 px-4">Supplier Name</th>
-                      <th className="py-3 px-4">Contact Person</th>
+                      <th className="py-3 px-4">Company</th>
                       <th className="py-3 px-4">Phone / Mobile</th>
                       <th className="py-3 px-4">Address</th>
-                      <th className="py-3 px-4 text-right">Payable Balance</th>
+                      <th className="py-3 px-4 text-right">Opening Payable</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -154,7 +151,7 @@ export default function SuppliersPage() {
                           {s.name}
                         </td>
                         <td className="py-3.5 px-4 text-xs text-slate-600">
-                          {s.contactPerson || '-'}
+                          {s.company || '-'}
                         </td>
                         <td className="py-3.5 px-4 text-xs font-mono text-slate-700">
                           {s.phone}
@@ -163,8 +160,8 @@ export default function SuppliersPage() {
                           {s.address || '-'}
                         </td>
                         <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-900">
-                          {s.payableBalance > 0 ? (
-                            <span className="text-amber-700">৳{formatBdt(s.payableBalance)}</span>
+                          {s.openingPayable > 0 ? (
+                            <span className="text-amber-700">৳{formatBdt(s.openingPayable)}</span>
                           ) : (
                             <span className="text-slate-400">৳0.00</span>
                           )}
@@ -200,13 +197,13 @@ export default function SuppliersPage() {
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Contact Person
+                      Company / Distributor Name
                     </label>
                     <input
                       type="text"
-                      value={contactPerson}
-                      onChange={(e) => setContactPerson(e.target.value)}
-                      placeholder="e.g. Tanvir Ahmed"
+                      value={company}
+                      onChange={(e) => setCompany(e.target.value)}
+                      placeholder="e.g. Acme Consumer Goods Ltd"
                       className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs"
                     />
                   </div>

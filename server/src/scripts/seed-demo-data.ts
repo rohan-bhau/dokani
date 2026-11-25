@@ -340,7 +340,7 @@ export async function seedDemoData(): Promise<void> {
             productId: prod.id,
             type: 'OPENING',
             quantity: p.stock,
-            unitCost: BigInt(p.costPrice * 100),
+            unitCost: BigInt(p.costPrice),
             reason: 'Store opening inventory',
             createdBy: primaryOwnerUser.id,
           },
@@ -357,7 +357,7 @@ export async function seedDemoData(): Promise<void> {
         where: { tenantId: tenant.id, phone: c.phone },
       });
 
-      const dueBigInt = BigInt(c.dueBalance * 100);
+      const dueBigInt = BigInt(c.dueBalance);
 
       if (!cust) {
         cust = await prisma.customer.create({
@@ -555,7 +555,7 @@ export async function seedDemoData(): Promise<void> {
           data: {
             tenantId: tenant.id,
             category: exp.category as any,
-            amount: BigInt(exp.amount * 100),
+            amount: BigInt(exp.amount),
             note: exp.description,
             spentOn: new Date(Date.now() - Math.floor(Math.random() * 5 * 24 * 60 * 60 * 1000)),
             createdBy: primaryOwnerUser.id,

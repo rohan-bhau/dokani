@@ -48,11 +48,8 @@ export default function InventoryPage() {
   const [adjustmentReason, setAdjustmentReason] = useState('Physical count audit difference');
   const [adjustMessage, setAdjustMessage] = useState<{ text: string; isError?: boolean } | null>(null);
 
-  const formatBdt = (paisas: number) => {
-    return (paisas / 100).toLocaleString('en-BD', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+  const formatBdt = (amount: number) => {
+    return Math.round(amount).toLocaleString('en-BD');
   };
 
   const handleAdjustSubmit = async (e: React.FormEvent) => {

@@ -68,7 +68,7 @@ export default function CustomersPage() {
     }
 
     try {
-      const openingDuePoisha = openingDue ? Math.round(parseFloat(openingDue) * 100) : 0;
+      const openingDuePoisha = openingDue ? Math.round(parseFloat(openingDue)) : 0;
       await createCustomer({
         name: name.trim(),
         phone: phone.trim(),
@@ -102,7 +102,7 @@ export default function CustomersPage() {
     }
 
     try {
-      const amountPoisha = Math.round(amountNum * 100);
+      const amountPoisha = Math.round(amountNum);
       await collectDue({
         customerId: selectedCustomerForDue.id,
         data: {
@@ -156,7 +156,7 @@ export default function CustomersPage() {
         <div className="rounded-lg border border-border bg-surface p-4 shadow-sm">
           <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Active Due (Baki)</p>
           <p className="mt-2 text-2xl font-bold text-red-600">
-            BDT {(totalDue / 100).toLocaleString('en-BD', { minimumFractionDigits: 2 })}
+            BDT {Math.round(totalDue).toLocaleString('en-BD')}
           </p>
         </div>
         <div className="rounded-lg border border-border bg-surface p-4 shadow-sm">
@@ -276,7 +276,7 @@ export default function CustomersPage() {
                             : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                         }`}
                       >
-                        BDT {(customer.dueBalance / 100).toLocaleString('en-BD', { minimumFractionDigits: 2 })}
+                        BDT {Math.round(customer.dueBalance).toLocaleString('en-BD')}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -421,7 +421,7 @@ export default function CustomersPage() {
             <div className="mt-4 rounded-md bg-slate-50 p-3 border border-slate-200 text-xs">
               <span className="text-slate-500">Outstanding Due Balance: </span>
               <span className="font-bold text-red-600">
-                BDT {(selectedCustomerForDue.dueBalance / 100).toLocaleString('en-BD', { minimumFractionDigits: 2 })}
+                BDT {Math.round(selectedCustomerForDue.dueBalance).toLocaleString('en-BD')}
               </span>
             </div>
 

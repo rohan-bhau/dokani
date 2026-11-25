@@ -7,6 +7,7 @@ export const createSupplierSchema = z
     phone: z.string().trim().min(6, 'Valid phone number is required').max(20),
     email: z.string().trim().email().optional(),
     address: z.string().trim().max(500).optional(),
+    openingPayable: z.number().int().nonnegative().optional(),
   })
   .strict();
 

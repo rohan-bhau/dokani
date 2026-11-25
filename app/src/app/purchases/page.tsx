@@ -39,15 +39,12 @@ export default function PurchasesPage() {
     { productId: '', quantity: 1, unitCost: 0 },
   ]);
 
-  const purchases = purchaseData?.data?.purchases || [];
-  const suppliers = supplierData?.data?.suppliers || [];
+  const purchases = purchaseData?.data?.items || [];
+  const suppliers = supplierData?.data?.items || [];
   const products = productsData?.data?.products || [];
 
-  const formatBdt = (paisas: number) => {
-    return (paisas / 100).toLocaleString('en-BD', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+  const formatBdt = (amount: number) => {
+    return Math.round(amount).toLocaleString('en-BD');
   };
 
   const handleAddItemRow = () => {
@@ -91,9 +88,9 @@ export default function PurchasesPage() {
         items: validItems.map((it) => ({
           productId: it.productId,
           quantity: it.quantity,
-          unitCost: it.unitCost * 100, // convert BDT to paisa
+          unitCost: Math.round(it.unitCost),
         })),
-        paidAmount: paidAmount * 100,
+        paidAmount: Math.round(paidAmount),
         notes: notes.trim() || undefined,
       }).unwrap();
 
@@ -173,7 +170,7 @@ export default function PurchasesPage() {
                     {purchases.map((p) => (
                       <tr key={p.id} className="hover:bg-slate-50/50 transition">
                         <td className="py-3.5 px-4 font-mono font-semibold text-slate-900">
-                          #{p.poNumber}
+                          {p.purchaseNumber}
                         </td>
                         <td className="py-3.5 px-4 text-xs text-slate-500">
                           {new Date(p.createdAt).toLocaleDateString('en-BD', {
@@ -184,13 +181,18 @@ export default function PurchasesPage() {
                           {p.supplier?.name || 'Vendor'}
                         </td>
                         <td className="py-3.5 px-4 text-xs text-center">
-                          {p.items?.length || 0} line(s)
+                          {p._count?.items ?? p.items?.length ?? 0} line(s)
                         </td>
                         <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-900">
-                          ৳{formatBdt(p.totalCost)}
+                          ৳{formatBdt(p.total)}
                         </td>
                         <td className="py-3.5 px-4 text-right font-mono font-semibold text-emerald-600">
                           ৳{formatBdt(p.paidAmount)}
+                          {p.dueAmount > 0 && (
+                            <span className="block text-[10px] text-amber-700">
+                              Due: ৳{formatBdt(p.dueAmount)}
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}
