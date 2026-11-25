@@ -1,8 +1,23 @@
 import type { Metadata } from 'next';
+import { JetBrains_Mono, Plus_Jakarta_Sans } from 'next/font/google';
 import { Navigation } from '@/components/navigation';
 import { Footer } from '@/components/footer';
 import { Providers } from '@/components/providers';
 import './globals.css';
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-sans',
+  display: 'swap',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-mono',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Dokani - Retail POS & Inventory Management System',
@@ -15,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${plusJakartaSans.variable} ${jetbrainsMono.variable}`}>
       <body className="min-h-screen bg-canvas font-sans text-slate-900 antialiased flex flex-col justify-between">
         <Providers>
           <div className="flex min-h-screen flex-col">
