@@ -40,9 +40,6 @@ export function Footer() {
               <li>
                 <Link href="/features" className="hover:text-brand">All Features</Link>
               </li>
-              <li>
-                <Link href="/pricing" className="hover:text-brand">Pricing & Plans</Link>
-              </li>
             </ul>
 
           </div>

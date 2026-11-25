@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import {
   createStaffSchema,
-  inviteStaffSchema,
   updateStaffRoleSchema,
   updateRolePermissionsSchema,
   Permission,
@@ -12,10 +11,6 @@ import { validateRequest } from '../../middleware/validate.js';
 import { staffController } from './staff.controller.js';
 
 export const staffRouter = Router();
-
-// Public invitation preview & acceptance endpoints
-staffRouter.get('/invitations/:token', staffController.getInvitationDetails);
-staffRouter.post('/invitations/:token/accept', staffController.acceptInvitation);
 
 staffRouter.use(authenticate);
 
@@ -30,13 +25,6 @@ staffRouter.post(
   requirePermissions(Permission.STAFF_MANAGE),
   validateRequest({ body: createStaffSchema }),
   staffController.createStaff
-);
-
-staffRouter.post(
-  '/invite',
-  requirePermissions(Permission.STAFF_MANAGE),
-  validateRequest({ body: inviteStaffSchema }),
-  staffController.inviteStaff
 );
 
 staffRouter.patch(

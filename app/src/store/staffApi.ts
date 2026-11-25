@@ -12,17 +12,6 @@ export interface StaffMember {
   createdAt: string;
 }
 
-export interface StaffInvitation {
-  id: string;
-  name: string;
-  emailOrPhone: string;
-  status: 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'CANCELLED';
-  expiresAt: string;
-  createdAt: string;
-  role: string;
-  roleId: string;
-}
-
 export interface RolePermissionItem {
   id: string;
   name: string;
@@ -46,7 +35,6 @@ export const staffApi = baseApi.injectEndpoints({
         success: boolean;
         data: {
           users: StaffMember[];
-          invitations: StaffInvitation[];
         };
       },
       void
@@ -61,29 +49,6 @@ export const staffApi = baseApi.injectEndpoints({
     >({
       query: (body) => ({
         url: '/staff',
-        method: 'POST',
-        body,
-      }),
-      invalidatesTags: ['AuditLog'],
-    }),
-
-    inviteStaff: builder.mutation<
-      {
-        success: boolean;
-        message: string;
-        data: {
-          invitationId: string;
-          inviteUrl: string;
-          name: string;
-          emailOrPhone: string;
-          role: string;
-          expiresAt: string;
-        };
-      },
-      { name: string; phoneOrEmail: string; roleId: string }
-    >({
-      query: (body) => ({
-        url: '/staff/invite',
         method: 'POST',
         body,
       }),
@@ -149,7 +114,6 @@ export const staffApi = baseApi.injectEndpoints({
 export const {
   useGetStaffListQuery,
   useCreateStaffMutation,
-  useInviteStaffMutation,
   useUpdateStaffRoleMutation,
   useDeactivateStaffMutation,
   useReactivateStaffMutation,

@@ -14,12 +14,6 @@ export class StaffRepository {
       orderBy: { createdAt: 'asc' },
     });
 
-    const invitations = await prisma.staffInvitation.findMany({
-      where: { tenantId, status: 'PENDING' },
-      include: { role: true },
-      orderBy: { createdAt: 'desc' },
-    });
-
     return {
       users: users.map((u) => ({
         id: u.id,
@@ -32,46 +26,7 @@ export class StaffRepository {
         roleId: u.userRoles[0]?.roleId,
         createdAt: u.createdAt,
       })),
-      invitations: invitations.map((inv) => ({
-        id: inv.id,
-        name: inv.name,
-        emailOrPhone: inv.emailOrPhone,
-        role: inv.role.name,
-        roleId: inv.roleId,
-        status: inv.status,
-        expiresAt: inv.expiresAt,
-        createdAt: inv.createdAt,
-      })),
     };
-  }
-
-  async createInvitation(
-    tenantId: string,
-    data: { name: string; emailOrPhone: string; roleId: string; tokenHash: string }
-  ) {
-    // Check if role exists
-    const role = await prisma.role.findFirst({
-      where: { id: data.roleId, OR: [{ tenantId }, { isSystem: true }] },
-    });
-
-    if (!role) {
-      throw new NotFoundError('Selected role does not exist.');
-    }
-
-    // 48 hours expiry
-    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
-
-    return prisma.staffInvitation.create({
-      data: {
-        tenantId,
-        name: data.name,
-        emailOrPhone: data.emailOrPhone,
-        roleId: data.roleId,
-        tokenHash: data.tokenHash,
-        expiresAt,
-      },
-      include: { role: true },
-    });
   }
 
   async updateStaffRole(tenantId: string, userId: string, roleId: string) {
@@ -223,67 +178,6 @@ export class StaffRepository {
     });
 
     return this.getRolePermissionMatrix(tenantId);
-  }
-
-  async findInvitationByTokenHash(tokenHash: string) {
-    return prisma.staffInvitation.findFirst({
-      where: { tokenHash },
-      include: {
-        role: true,
-        tenant: { select: { id: true, name: true, logoUrl: true } },
-      },
-    });
-  }
-
-  async acceptInvitation(params: {
-    invitationId: string;
-    tenantId: string;
-    roleId: string;
-    name: string;
-    phone: string;
-    email: string | null;
-    passwordHash: string;
-  }) {
-    return prisma.$transaction(async (tx) => {
-      const existing = await tx.user.findFirst({
-        where: { tenantId: params.tenantId, phone: params.phone },
-      });
-
-      if (existing) {
-        throw new BadRequestError('A user with this phone number already exists in this store.');
-      }
-
-      const user = await tx.user.create({
-        data: {
-          tenantId: params.tenantId,
-          name: params.name,
-          phone: params.phone,
-          email: params.email,
-          passwordHash: params.passwordHash,
-          isActive: true,
-          userRoles: {
-            create: {
-              roleId: params.roleId,
-            },
-          },
-        },
-        select: {
-          id: true,
-          name: true,
-          phone: true,
-          email: true,
-        },
-      });
-
-      await tx.staffInvitation.update({
-        where: { id: params.invitationId },
-        data: {
-          status: 'ACCEPTED',
-        },
-      });
-
-      return user;
-    });
   }
 
   async createStaffMember(
