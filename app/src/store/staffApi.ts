@@ -55,6 +55,18 @@ export const staffApi = baseApi.injectEndpoints({
       providesTags: ['AuditLog'],
     }),
 
+    createStaff: builder.mutation<
+      { success: boolean; message: string; data: StaffMember },
+      { name: string; phone: string; email?: string; password: string; roleId: string }
+    >({
+      query: (body) => ({
+        url: '/staff',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['AuditLog'],
+    }),
+
     inviteStaff: builder.mutation<
       {
         success: boolean;
@@ -101,6 +113,17 @@ export const staffApi = baseApi.injectEndpoints({
       invalidatesTags: ['AuditLog'],
     }),
 
+    reactivateStaff: builder.mutation<
+      { success: boolean; message: string },
+      string
+    >({
+      query: (id) => ({
+        url: `/staff/${id}/reactivate`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['AuditLog'],
+    }),
+
     getRolePermissions: builder.query<
       { success: boolean; data: RolePermissionMatrixResponse },
       void
@@ -125,9 +148,11 @@ export const staffApi = baseApi.injectEndpoints({
 
 export const {
   useGetStaffListQuery,
+  useCreateStaffMutation,
   useInviteStaffMutation,
   useUpdateStaffRoleMutation,
   useDeactivateStaffMutation,
+  useReactivateStaffMutation,
   useGetRolePermissionsQuery,
   useUpdateRolePermissionsMutation,
 } = staffApi;

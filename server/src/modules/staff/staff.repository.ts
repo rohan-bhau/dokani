@@ -1,3 +1,4 @@
+import { ROLE_DEFAULT_PERMISSIONS } from '@dokani/shared';
 import { prisma } from '../../config/prisma.js';
 import { NotFoundError, BadRequestError } from '../../common/errors.js';
 
@@ -88,11 +89,15 @@ export class StaffRepository {
     }
 
     const role = await prisma.role.findFirst({
-      where: { id: roleId, OR: [{ tenantId }, { isSystem: true }] },
+      where: { id: roleId, tenantId },
     });
 
     if (!role) {
       throw new NotFoundError('Role not found.');
+    }
+
+    if (role.name === 'OWNER') {
+      throw new BadRequestError('Cannot assign the Owner role to a staff account.');
     }
 
     // Update user role
@@ -131,14 +136,52 @@ export class StaffRepository {
     });
   }
 
+  async ensureDefaultTenantRoles(tenantId: string) {
+    const existingRoles = await prisma.role.findMany({
+      where: { tenantId },
+      select: { name: true },
+    });
+    const existingNames = new Set(existingRoles.map((r) => r.name));
+    const missingEntries = Object.entries(ROLE_DEFAULT_PERMISSIONS).filter(
+      ([roleName]) => !existingNames.has(roleName)
+    );
+
+    if (missingEntries.length === 0) return;
+
+    const allPermissions = await prisma.permission.findMany({
+      select: { id: true, code: true },
+    });
+    const permIdByCode = new Map(allPermissions.map((p) => [p.code, p.id]));
+
+    for (const [roleName, permCodes] of missingEntries) {
+      const permIds = permCodes
+        .map((code) => permIdByCode.get(code))
+        .filter((id): id is string => Boolean(id));
+
+      await prisma.role.create({
+        data: {
+          tenantId,
+          name: roleName,
+          isSystem: true,
+          rolePermissions: {
+            create: permIds.map((permissionId) => ({ permissionId })),
+          },
+        },
+      });
+    }
+  }
+
   async getRolePermissionMatrix(tenantId: string) {
+    await this.ensureDefaultTenantRoles(tenantId);
+
     const roles = await prisma.role.findMany({
-      where: { OR: [{ tenantId }, { isSystem: true }] },
+      where: { tenantId },
       include: {
         rolePermissions: {
           include: { permission: true },
         },
       },
+      orderBy: { name: 'asc' },
     });
 
     const allPermissions = await prisma.permission.findMany({
@@ -158,11 +201,15 @@ export class StaffRepository {
 
   async updateRolePermissions(tenantId: string, roleId: string, permissionIds: string[]) {
     const role = await prisma.role.findFirst({
-      where: { id: roleId, OR: [{ tenantId }, { isSystem: true }] },
+      where: { id: roleId, tenantId },
     });
 
     if (!role) {
       throw new NotFoundError('Role not found.');
+    }
+
+    if (role.name === 'OWNER') {
+      throw new BadRequestError('Cannot modify Owner permissions.');
     }
 
     if (role.name === 'OWNER') {
@@ -237,6 +284,69 @@ export class StaffRepository {
 
       return user;
     });
+  }
+
+  async createStaffMember(
+    tenantId: string,
+    data: {
+      name: string;
+      phone: string;
+      email: string | null;
+      passwordHash: string;
+      roleId: string;
+    }
+  ) {
+    const role = await prisma.role.findFirst({
+      where: { id: data.roleId, tenantId },
+    });
+
+    if (!role) {
+      throw new NotFoundError('Selected role does not exist in this store.');
+    }
+
+    if (role.name === 'OWNER') {
+      throw new BadRequestError('Cannot assign the Owner role to a staff account.');
+    }
+
+    const existing = await prisma.user.findFirst({
+      where: { phone: data.phone },
+    });
+
+    if (existing) {
+      throw new BadRequestError('An account with this mobile number already exists.');
+    }
+
+    const user = await prisma.user.create({
+      data: {
+        tenantId,
+        name: data.name,
+        phone: data.phone,
+        email: data.email,
+        passwordHash: data.passwordHash,
+        isActive: true,
+        userRoles: {
+          create: {
+            roleId: data.roleId,
+          },
+        },
+      },
+      include: {
+        userRoles: {
+          include: { role: true },
+        },
+      },
+    });
+
+    return {
+      id: user.id,
+      name: user.name,
+      phone: user.phone,
+      email: user.email,
+      isActive: user.isActive,
+      role: user.userRoles[0]?.role?.name || role.name,
+      roleId: data.roleId,
+      createdAt: user.createdAt,
+    };
   }
 }
 

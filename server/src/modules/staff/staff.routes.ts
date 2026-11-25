@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  createStaffSchema,
   inviteStaffSchema,
   updateStaffRoleSchema,
   updateRolePermissionsSchema,
@@ -22,6 +23,13 @@ staffRouter.get(
   '/',
   requireAnyPermission(Permission.STAFF_MANAGE, Permission.STAFF_VIEW),
   staffController.listStaff
+);
+
+staffRouter.post(
+  '/',
+  requirePermissions(Permission.STAFF_MANAGE),
+  validateRequest({ body: createStaffSchema }),
+  staffController.createStaff
 );
 
 staffRouter.post(

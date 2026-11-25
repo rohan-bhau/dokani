@@ -14,6 +14,18 @@ export const inviteStaffSchema = z
 
 export type InviteStaffInput = z.infer<typeof inviteStaffSchema>;
 
+export const createStaffSchema = z
+  .object({
+    name: z.string().trim().min(2, 'Name must be at least 2 characters').max(100),
+    phone: z.string().trim().regex(phoneRegex, 'Invalid Bangladeshi mobile number'),
+    email: z.string().trim().email('Invalid email address').optional(),
+    password: z.string().min(8, 'Password must be at least 8 characters').max(100),
+    roleId: z.string().uuid('Invalid role ID'),
+  })
+  .strict();
+
+export type CreateStaffInput = z.infer<typeof createStaffSchema>;
+
 export const acceptInviteSchema = z
   .object({
     password: z.string().min(8, 'Password must be at least 8 characters'),

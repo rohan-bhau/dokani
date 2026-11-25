@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import type { RootState, AppDispatch } from '@/store';
 import { logout as logoutAction } from '@/store/authSlice';
+import { baseApi } from '@/store/api';
 import { Permission } from '@dokani/shared';
 import { hasAnyPermission } from '@/components/auth-guard';
 import { useLogoutMutation } from '@/store/authApi';
@@ -78,6 +79,7 @@ export function Navigation() {
       // Continue local logout
     }
     dispatch(logoutAction());
+    dispatch(baseApi.util.resetApiState());
     setMobileMenuOpen(false);
     setOpenDropdown(null);
     router.push('/login');

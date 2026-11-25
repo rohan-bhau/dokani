@@ -8,6 +8,7 @@ import { Lock, Phone, AlertCircle, ArrowRight } from 'lucide-react';
 import { DokaniLogo } from '@/components/dokani-logo';
 import { useLoginMutation } from '@/store/authApi';
 import { setCredentials } from '@/store/authSlice';
+import { baseApi } from '@/store/api';
 import type { AppDispatch } from '@/store';
 
 export default function LoginPage() {
@@ -26,6 +27,7 @@ export default function LoginPage() {
     try {
       const res = await login({ phone: phone.trim(), password }).unwrap();
       const payload = res.data;
+      dispatch(baseApi.util.resetApiState());
       dispatch(
         setCredentials({
           user: payload.user,

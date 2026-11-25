@@ -22,6 +22,22 @@ export class StaffController {
     }
   };
 
+  createStaff = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { tenantId } = getRequestContext();
+      const staffMember = await this.service.createStaffMember(tenantId, req.body);
+
+      res.status(201).json({
+        success: true,
+        statusCode: 201,
+        message: 'Staff account created successfully.',
+        data: staffMember,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   inviteStaff = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { tenantId } = getRequestContext();

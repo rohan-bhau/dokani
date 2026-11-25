@@ -3,13 +3,47 @@ import { staffRepository, type StaffRepository } from './staff.repository.js';
 import { prisma } from '../../config/prisma.js';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../../common/errors.js';
 import { hashPassword } from '../auth/auth.password.js';
-import type { AcceptInviteInput, InviteStaffInput, UpdateRolePermissionsInput } from '@dokani/shared';
+import type {
+  AcceptInviteInput,
+  CreateStaffInput,
+  InviteStaffInput,
+  UpdateRolePermissionsInput,
+} from '@dokani/shared';
 
 export class StaffService {
   constructor(private readonly repo: StaffRepository = staffRepository) {}
 
   async listStaff(tenantId: string) {
     return this.repo.listStaff(tenantId);
+  }
+
+  async createStaffMember(tenantId: string, input: CreateStaffInput) {
+    const sub = await prisma.subscription.findFirst({
+      where: { tenantId, status: { in: ['ACTIVE', 'TRIALING'] } },
+      include: { plan: true },
+    });
+
+    const maxStaff = sub?.plan?.maxStaff ?? 1;
+    if (maxStaff !== -1) {
+      const currentStaffCount = await prisma.user.count({
+        where: { tenantId, isActive: true },
+      });
+
+      if (currentStaffCount >= maxStaff) {
+        throw new ForbiddenError(
+          `Staff limit reached for your plan (${maxStaff} user max). Please upgrade to add more staff.`
+        );
+      }
+    }
+
+    const passwordHash = await hashPassword(input.password);
+    return this.repo.createStaffMember(tenantId, {
+      name: input.name,
+      phone: input.phone,
+      email: input.email ?? null,
+      passwordHash,
+      roleId: input.roleId,
+    });
   }
 
   async inviteStaff(tenantId: string, input: InviteStaffInput) {

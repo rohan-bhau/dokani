@@ -173,11 +173,14 @@ export async function seedDemoData(): Promise<void> {
         .map((code) => permIdByCode.get(code))
         .filter((id): id is string => Boolean(id));
 
-      for (const permissionId of permIds) {
-        await prisma.rolePermission.upsert({
-          where: { roleId_permissionId: { roleId: role.id, permissionId } },
-          update: {},
-          create: { roleId: role.id, permissionId },
+      await prisma.rolePermission.deleteMany({
+        where: { roleId: role.id },
+      });
+
+      if (permIds.length > 0) {
+        await prisma.rolePermission.createMany({
+          data: permIds.map((permissionId) => ({ roleId: role.id, permissionId })),
+          skipDuplicates: true,
         });
       }
     }

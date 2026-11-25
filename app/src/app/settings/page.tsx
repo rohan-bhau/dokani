@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Permission } from '@dokani/shared';
 import { AuthGuard } from '@/components/auth-guard';
 import { ShopLogo } from '@/components/dokani-logo';
@@ -14,6 +15,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Save,
+  Users,
 } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -107,20 +109,30 @@ export default function SettingsPage() {
     <AuthGuard requireAnyPermissions={[Permission.TENANT_SETTINGS_MANAGE]}>
       <div className="max-w-4xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Header */}
-          <div className="flex items-center gap-3.5">
-            <ShopLogo
-              name={formData.name || data?.data?.name || 'Store'}
-              logoUrl={formData.logoUrl.trim() || data?.data?.logoUrl || null}
-              size="lg"
-            />
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-                {formData.name || data?.data?.name || 'Store'} Settings
-              </h1>
-              <p className="text-sm text-slate-600">
-                Configure store identity, thermal printing layout, VAT rules, and cashier authorization limits.
-              </p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <ShopLogo
+                name={formData.name || data?.data?.name || 'Store'}
+                logoUrl={formData.logoUrl.trim() || data?.data?.logoUrl || null}
+                size="lg"
+              />
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+                  {formData.name || data?.data?.name || 'Store'} Settings
+                </h1>
+                <p className="text-sm text-slate-600">
+                  Configure store identity, thermal printing layout, VAT rules, and employee access.
+                </p>
+              </div>
             </div>
+
+            <Link
+              href="/staff"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 rounded-lg text-xs font-semibold transition self-start sm:self-auto"
+            >
+              <Users className="w-4 h-4 text-slate-500" />
+              <span>Manage Employees &amp; Roles</span>
+            </Link>
           </div>
 
           {/* Navigation Tabs */}
