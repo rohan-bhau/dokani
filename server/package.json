@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "prisma generate && tsc && node -e \"const fs=require('fs');fs.cpSync('src/generated/client','dist/src/generated/client',{recursive:true})\"",
     "dev": "tsx watch src/server.ts",
     "start": "node dist/src/server.js",
     "typecheck": "tsc --noEmit",
