@@ -35,7 +35,7 @@ export function useSocket({ onPaymentConfirmed }: UseSocketOptions = {}) {
       return;
     }
 
-    const targetUrl = env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
+    const targetUrl = env.NEXT_PUBLIC_SOCKET_URL ?? env.NEXT_PUBLIC_API_URL;
 
     const socket = io(targetUrl, {
       path: '/socket.io',
