@@ -47,6 +47,7 @@ export const paymentApi = baseApi.injectEndpoints({
         success: boolean;
         data: {
           id: string;
+          invoiceId: string;
           invoiceNumber: string;
           createdAt: string;
           status: string;
@@ -83,10 +84,17 @@ export const paymentApi = baseApi.injectEndpoints({
     completeSimulatedPayment: builder.mutation<
       {
         success: boolean;
+        statusCode: number;
         message: string;
-        invoiceNumber: string;
-        transactionId: string;
-        amount: number;
+        data: {
+          id: string;
+          invoiceId: string;
+          success: boolean;
+          message: string;
+          invoiceNumber: string;
+          transactionId: string;
+          amount: number;
+        };
       },
       {
         token: string;
@@ -100,6 +108,7 @@ export const paymentApi = baseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
+      invalidatesTags: ['Sale', 'Customer', 'CustomerLedger', 'Report'],
     }),
   }),
 });

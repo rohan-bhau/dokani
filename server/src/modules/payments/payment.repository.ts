@@ -147,6 +147,14 @@ export class PaymentRepository {
 
       // Update invoice if payment is tied to an invoice
       if (payment.invoiceId && payment.invoice) {
+        await tx.payment.deleteMany({
+          where: {
+            invoiceId: payment.invoiceId,
+            amount: 0n,
+            id: { not: paymentId },
+          },
+        });
+
         const newPaidTotal = payment.invoice.paidTotal + payment.amount;
         const newDueTotal =
           payment.invoice.total > newPaidTotal ? payment.invoice.total - newPaidTotal : 0n;
@@ -160,12 +168,19 @@ export class PaymentRepository {
         });
       }
 
-      // Update customer due ledger if payment is tied to a customer
-      if (payment.customerId && payment.customer) {
+      // Update customer due ledger if payment settles due balance
+      const shouldAdjustCustomerDue = payment.invoice
+        ? payment.invoice.dueTotal > 0n
+        : (payment.customer?.dueBalance ?? 0n) > 0n;
+
+      if (payment.customerId && payment.customer && shouldAdjustCustomerDue) {
+        const currentDue = payment.customer.dueBalance;
+        const nextDue = currentDue > payment.amount ? currentDue - payment.amount : 0n;
+
         const updatedCustomer = await tx.customer.update({
           where: { id: payment.customerId },
           data: {
-            dueBalance: { decrement: payment.amount },
+            dueBalance: nextDue,
           },
         });
 

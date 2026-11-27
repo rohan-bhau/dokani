@@ -134,10 +134,11 @@ function PublicPaymentContent() {
         pin: pin,
       }).unwrap();
 
+      const settled = response.data;
       setPaymentSuccessData({
-        invoiceNumber: response.invoiceNumber,
-        transactionId: response.transactionId,
-        amount: response.amount,
+        invoiceNumber: settled.invoiceNumber || invoice.invoiceNumber,
+        transactionId: settled.transactionId,
+        amount: settled.amount || invoice.total,
         provider: selectedMethod,
       });
       setStep('SUCCESS');
@@ -239,7 +240,7 @@ function PublicPaymentContent() {
                   Print Receipt
                 </button>
                 <Link
-                  href={`/pos?payment_status=success&invoice_id=${invoice.id}`}
+                  href={`/pos?payment_status=success&invoice_id=${encodeURIComponent(invoice.id || invoice.invoiceId)}&tran_id=${encodeURIComponent(paymentSuccessData?.transactionId || 'TRX-ONLINE-CONFIRMED')}&amount=${encodeURIComponent(String(paymentSuccessData?.amount || invoice.total))}`}
                   className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 bg-white rounded-xl text-xs font-semibold hover:bg-slate-50 transition text-center"
                 >
                   Return to POS Terminal
@@ -391,7 +392,7 @@ function PublicPaymentContent() {
                         <div>
                           <div className="flex items-center justify-between mb-1">
                             <label className="text-xs font-semibold text-slate-700">Card Number</label>
-                            <span className="text-[11px] font-semibold text-indigo-600">⚡ Demo Card</span>
+                            <span className="text-[11px] font-semibold text-indigo-600">Demo Card</span>
                           </div>
                           <input
                             type="text"
@@ -527,7 +528,7 @@ function PublicPaymentContent() {
                       onClick={() => setOtp('123456')}
                       className="text-[11px] font-semibold text-brand hover:underline"
                     >
-                      ⚡ Fill Demo: 123456
+                      Fill Demo: 123456
                     </button>
                   </div>
                   <input

@@ -28,10 +28,16 @@ export class PaymentController {
     }
   };
 
+  private resolveFrontendOrigin(req: Request): string {
+    if (typeof req.query.return_origin === 'string' && req.query.return_origin.trim()) {
+      return req.query.return_origin.trim();
+    }
+    return env.CORS_ORIGIN.split(',')[0]?.trim() || env.CORS_ORIGIN;
+  }
+
   handleSslSuccess = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
     const payload = { ...req.query, ...req.body };
-    const frontendUrl =
-      (typeof req.query.return_origin === 'string' && req.query.return_origin) || env.CORS_ORIGIN;
+    const frontendUrl = this.resolveFrontendOrigin(req);
 
     try {
       const result = await this.service.handleCallbackOrIpn('SSLCOMMERZ', payload);
@@ -58,15 +64,13 @@ export class PaymentController {
 
   handleSslFail = async (req: Request, res: Response): Promise<void> => {
     const payload = { ...req.query, ...req.body };
-    const frontendUrl =
-      (typeof req.query.return_origin === 'string' && req.query.return_origin) || env.CORS_ORIGIN;
+    const frontendUrl = this.resolveFrontendOrigin(req);
     const reason = (payload.error || payload.failedreason || 'Payment failed') as string;
     res.redirect(`${frontendUrl}/pos?payment_status=failed&reason=${encodeURIComponent(reason)}`);
   };
 
   handleSslCancel = async (req: Request, res: Response): Promise<void> => {
-    const frontendUrl =
-      (typeof req.query.return_origin === 'string' && req.query.return_origin) || env.CORS_ORIGIN;
+    const frontendUrl = this.resolveFrontendOrigin(req);
     res.redirect(`${frontendUrl}/pos?payment_status=cancelled`);
   };
 

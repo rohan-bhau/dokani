@@ -99,12 +99,12 @@ export const staffApi = baseApi.injectEndpoints({
 
     updateRolePermissions: builder.mutation<
       { success: boolean; message: string },
-      { roleId: string; permissions: string[] }
+      { roleId: string; permissionIds: string[] }
     >({
-      query: ({ roleId, permissions }) => ({
+      query: ({ roleId, permissionIds }) => ({
         url: `/staff/roles/${roleId}/permissions`,
         method: 'PATCH',
-        body: { permissions },
+        body: { permissionIds },
       }),
       invalidatesTags: ['AuditLog'],
     }),

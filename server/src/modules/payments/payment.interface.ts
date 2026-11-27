@@ -3,6 +3,7 @@ export interface CreatePaymentRequest {
   currency: string; // 'BDT'
   invoiceNumber: string;
   internalPaymentId: string;
+  paymentToken?: string | undefined;
   customerName?: string | undefined;
   customerPhone?: string | undefined;
   customerEmail?: string | undefined;

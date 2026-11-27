@@ -167,10 +167,6 @@ export class StaffRepository {
       throw new BadRequestError('Cannot modify Owner permissions.');
     }
 
-    if (role.name === 'OWNER') {
-      throw new BadRequestError('Cannot modify Owner permissions.');
-    }
-
     await prisma.rolePermission.deleteMany({ where: { roleId } });
 
     await prisma.rolePermission.createMany({
@@ -190,6 +186,8 @@ export class StaffRepository {
       roleId: string;
     }
   ) {
+    await this.ensureDefaultTenantRoles(tenantId);
+
     const role = await prisma.role.findFirst({
       where: { id: data.roleId, tenantId },
     });
@@ -210,12 +208,22 @@ export class StaffRepository {
       throw new BadRequestError('An account with this mobile number already exists.');
     }
 
+    const normalizedEmail = data.email?.trim() ? data.email.trim() : null;
+    if (normalizedEmail) {
+      const existingEmail = await prisma.user.findFirst({
+        where: { tenantId, email: normalizedEmail },
+      });
+      if (existingEmail) {
+        throw new BadRequestError('An account with this email address already exists in this store.');
+      }
+    }
+
     const user = await prisma.user.create({
       data: {
         tenantId,
         name: data.name,
         phone: data.phone,
-        email: data.email,
+        email: normalizedEmail,
         passwordHash: data.passwordHash,
         isActive: true,
         userRoles: {

@@ -189,4 +189,75 @@ describe('Local Payments & Realtime Sync Tests', () => {
         expect(notFoundRes.status).toBe(404);
         expect(notFoundRes.body.success).toBe(false);
     });
+
+    it('should complete POS SSLCommerz hosted checkout flow and settle invoice cleanly', async () => {
+        const prodRes = await request(app)
+            .post('/api/v1/products')
+            .set('Authorization', `Bearer ${token}`)
+            .send({
+                name: 'Pran Chinigura Rice 1kg',
+                sku: 'PRAN-RICE-1KG',
+                costPrice: 120,
+                sellPrice: 150,
+                initialStock: 20,
+            });
+        expect(prodRes.status).toBe(201);
+        const productId = prodRes.body.data.id;
+
+        const saleRes = await request(app)
+            .post('/api/v1/sales')
+            .set('Authorization', `Bearer ${token}`)
+            .set('Idempotency-Key', 'pos-ssl-test-key-001')
+            .send({
+                items: [{ productId, quantity: 2, discount: 0 }],
+                discount: 0,
+                payments: [{ method: 'CARD', amount: 0 }],
+            });
+
+        expect(saleRes.status).toBe(201);
+        const invoice = saleRes.body.data;
+        expect(invoice.total).toBe(300);
+        expect(invoice.dueTotal).toBe(300);
+        expect(invoice.paymentToken).toBeDefined();
+
+        const initRes = await request(app)
+            .post('/api/v1/payments/initiate')
+            .set('Authorization', `Bearer ${token}`)
+            .send({
+                provider: 'SSLCOMMERZ',
+                amount: 300,
+                invoiceId: invoice.id,
+                callbackUrl: 'https://dokani-delta.vercel.app',
+            });
+
+        expect(initRes.status).toBe(200);
+        expect(initRes.body.data.redirectUrl).toBeDefined();
+
+        const publicInvRes = await request(app).get(
+            `/api/v1/payments/public/${invoice.paymentToken}`
+        );
+        expect(publicInvRes.status).toBe(200);
+        expect(publicInvRes.body.data.id).toBe(invoice.id);
+        expect(publicInvRes.body.data.dueTotal).toBe(300);
+
+        const settleRes = await request(app)
+            .post(`/api/v1/payments/public/${invoice.paymentToken}/complete-simulated`)
+            .send({ provider: 'SSLCOMMERZ' });
+
+        expect(settleRes.status).toBe(200);
+        expect(settleRes.body.success).toBe(true);
+        expect(settleRes.body.data.invoiceId).toBe(invoice.id);
+        expect(settleRes.body.data.amount).toBe(300);
+        expect(settleRes.body.data.transactionId).toBeDefined();
+
+        const verifySaleRes = await request(app)
+            .get(`/api/v1/sales/${invoice.id}`)
+            .set('Authorization', `Bearer ${token}`);
+
+        expect(verifySaleRes.status).toBe(200);
+        expect(verifySaleRes.body.data.paidTotal).toBe(300);
+        expect(verifySaleRes.body.data.dueTotal).toBe(0);
+        expect(verifySaleRes.body.data.payments.length).toBe(1);
+        expect(verifySaleRes.body.data.payments[0].amount).toBe(300);
+    });
 });

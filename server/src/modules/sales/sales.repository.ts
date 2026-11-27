@@ -92,6 +92,11 @@ export class SalesRepository {
         // Sort unique product IDs ascending to prevent deadlocks across concurrent checkouts
         const sortedProductIds = Array.from(new Set(input.items.map((i) => i.productId))).sort();
 
+        const tenantConfig = await tx.tenant.findUnique({
+          where: { id: tenantId },
+          select: { allowNegativeStock: true },
+        });
+
         // Lock rows in stock_levels for atomic concurrency
         const stockRows = await tx.$queryRaw<Array<{ product_id: string; quantity: number }>>`
           SELECT product_id, quantity 
@@ -126,7 +131,7 @@ export class SalesRepository {
           }
 
           const currentStock = stockMap.get(item.productId) ?? 0;
-          if (currentStock < item.quantity) {
+          if (!tenantConfig?.allowNegativeStock && currentStock < item.quantity) {
             throw new ConflictError(
               `Insufficient stock for '${product.name}'. Available: ${currentStock}, requested: ${item.quantity}.`
             );

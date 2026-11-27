@@ -30,6 +30,30 @@ export class PaymentService {
   async initiatePayment(tenantId: string, input: InitiatePaymentInput) {
     const provider = this.getProvider(input.provider);
 
+    let invoiceNumber = input.invoiceId;
+    let paymentToken: string | undefined;
+
+    if (input.invoiceId) {
+      const invoice = await prisma.invoice.findFirst({
+        where: { id: input.invoiceId, tenantId },
+        select: { id: true, invoiceNumber: true, paymentToken: true },
+      });
+
+      if (invoice) {
+        invoiceNumber = invoice.invoiceNumber;
+        if (invoice.paymentToken) {
+          paymentToken = invoice.paymentToken;
+        } else {
+          const generatedToken = crypto.randomUUID();
+          await prisma.invoice.update({
+            where: { id: invoice.id },
+            data: { paymentToken: generatedToken },
+          });
+          paymentToken = generatedToken;
+        }
+      }
+    }
+
     const pendingPayment = await this.paymentRepo.createPendingPayment({
       tenantId,
       invoiceId: input.invoiceId,
@@ -56,12 +80,8 @@ export class PaymentService {
       }
     }
 
-    if (!customerPhone) {
-      throw new BadRequestError('Customer phone number is required for payment initiation.');
-    }
-    if (input.provider === 'SSLCOMMERZ' && !customerName) {
-      throw new BadRequestError('Customer name is required for SSLCommerz payment initiation.');
-    }
+    customerPhone = customerPhone || '01711111111';
+    customerName = customerName || 'Walk-in Customer';
 
     const serverUrl = env.SERVER_URL;
     const callbackUrl =
@@ -74,8 +94,9 @@ export class PaymentService {
       const initiation = await provider.createPayment({
         amount: input.amount,
         currency: 'BDT',
-        invoiceNumber: input.invoiceId || pendingPayment.id,
+        invoiceNumber: invoiceNumber || pendingPayment.id,
         internalPaymentId: pendingPayment.id,
+        paymentToken,
         customerName,
         customerPhone,
         customerEmail,
@@ -235,6 +256,12 @@ export class PaymentService {
             receiptFooter: true,
           },
         },
+        customer: {
+          select: {
+            name: true,
+            phone: true,
+          },
+        },
         items: {
           include: {
             product: { select: { name: true, sku: true, unit: true } },
@@ -248,6 +275,7 @@ export class PaymentService {
     }
 
     return {
+      id: invoice.id,
       invoiceId: invoice.id,
       invoiceNumber: invoice.invoiceNumber,
       paymentToken: invoice.paymentToken,
@@ -259,6 +287,12 @@ export class PaymentService {
       paidTotal: Number(invoice.paidTotal),
       dueTotal: Number(invoice.dueTotal),
       createdAt: invoice.createdAt,
+      customer: invoice.customer
+        ? {
+            name: invoice.customer.name,
+            phone: invoice.customer.phone,
+          }
+        : null,
       shop: {
         id: invoice.tenant.id,
         name: invoice.tenant.name,
@@ -289,9 +323,12 @@ export class PaymentService {
 
   async completeSimulatedPublicPayment(
     token: string,
-    provider: 'BKASH' | 'SSLCOMMERZ',
+    provider: 'BKASH' | 'SSLCOMMERZ' = 'SSLCOMMERZ',
     transactionId?: string
   ) {
+    const normalizedProvider: 'BKASH' | 'SSLCOMMERZ' =
+      provider === 'BKASH' ? 'BKASH' : 'SSLCOMMERZ';
+
     const invoice = await prisma.invoice.findFirst({
       where: { paymentToken: token },
       include: { customer: true },
@@ -303,6 +340,8 @@ export class PaymentService {
 
     if (invoice.status === 'COMPLETED' && invoice.dueTotal === 0n) {
       return {
+        id: invoice.id,
+        invoiceId: invoice.id,
         success: true,
         message: 'Invoice already fully paid.',
         invoiceNumber: invoice.invoiceNumber,
@@ -311,72 +350,107 @@ export class PaymentService {
       };
     }
 
-
     const payAmount = invoice.dueTotal > 0n ? invoice.dueTotal : invoice.total;
-    const trxId = transactionId || `${provider.toLowerCase()}_${Date.now()}`;
+    const trxId = transactionId || `${normalizedProvider}_${Date.now()}`;
 
-    // Record payment
-    const payment = await prisma.payment.create({
-      data: {
-        tenantId: invoice.tenantId,
-        invoiceId: invoice.id,
-        customerId: invoice.customerId,
-        method: provider === 'BKASH' ? 'BKASH' : 'CARD',
-        status: 'SUCCESS',
-        provider,
-        providerRef: trxId,
-        amount: payAmount,
-        reference: trxId,
-      },
-    });
-
-    // Update invoice
-    await prisma.invoice.update({
-      where: { id: invoice.id },
-      data: {
-        paidTotal: { increment: payAmount },
-        dueTotal: 0n,
-        status: 'COMPLETED',
-      },
-    });
-
-    // If customer has due ledger, adjust
-    if (invoice.customerId) {
-      const customer = await prisma.customer.findUnique({
-        where: { id: invoice.customerId },
-      });
-      const currentDue = customer?.dueBalance ?? 0n;
-      const newDue = currentDue > payAmount ? currentDue - payAmount : 0n;
-
-      await prisma.customer.update({
-        where: { id: invoice.customerId },
-        data: { dueBalance: newDue },
-      });
-
-      await prisma.customerLedger.create({
-        data: {
-          tenantId: invoice.tenantId,
-          customerId: invoice.customerId,
-          type: 'PAYMENT_RECEIVED',
-          amount: payAmount,
-          balanceAfter: newDue,
-          referenceId: payment.id,
-          notes: `Public online settlement (${provider}) for invoice ${invoice.invoiceNumber}`,
+    const payment = await prisma.$transaction(async (tx) => {
+      await tx.payment.deleteMany({
+        where: {
+          invoiceId: invoice.id,
+          amount: 0n,
         },
       });
-    }
 
-    // Instant Cashier Real-time Sync via Socket.io
+      const existingPending = await tx.payment.findFirst({
+        where: {
+          invoiceId: invoice.id,
+          status: 'PENDING',
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      const settledPayment = existingPending
+        ? await tx.payment.update({
+            where: { id: existingPending.id },
+            data: {
+              method: normalizedProvider === 'BKASH' ? 'BKASH' : 'CARD',
+              status: 'SUCCESS',
+              provider: normalizedProvider,
+              providerRef: existingPending.providerRef || trxId,
+              amount: payAmount,
+              reference: trxId,
+            },
+          })
+        : await tx.payment.create({
+            data: {
+              tenantId: invoice.tenantId,
+              invoiceId: invoice.id,
+              customerId: invoice.customerId,
+              method: normalizedProvider === 'BKASH' ? 'BKASH' : 'CARD',
+              status: 'SUCCESS',
+              provider: normalizedProvider,
+              providerRef: trxId,
+              amount: payAmount,
+              reference: trxId,
+            },
+          });
+
+      const updatedPaidTotal =
+        invoice.paidTotal + payAmount > invoice.total
+          ? invoice.total
+          : invoice.paidTotal + payAmount;
+
+      await tx.invoice.update({
+        where: { id: invoice.id },
+        data: {
+          paidTotal: updatedPaidTotal,
+          dueTotal: 0n,
+          status: 'COMPLETED',
+        },
+      });
+
+      if (invoice.customerId && invoice.dueTotal > 0n) {
+        const customer = await tx.customer.findUnique({
+          where: { id: invoice.customerId },
+        });
+        const currentDue = customer?.dueBalance ?? 0n;
+        const newDue = currentDue > payAmount ? currentDue - payAmount : 0n;
+
+        await tx.customer.update({
+          where: { id: invoice.customerId },
+          data: { dueBalance: newDue },
+        });
+
+        await tx.customerLedger.create({
+          data: {
+            tenantId: invoice.tenantId,
+            customerId: invoice.customerId,
+            type: 'PAYMENT_RECEIVED',
+            amount: payAmount,
+            balanceAfter: newDue,
+            referenceId: settledPayment.id,
+            notes: `Online settlement (${normalizedProvider}) for invoice ${invoice.invoiceNumber}`,
+          },
+        });
+      }
+
+      return settledPayment;
+    });
+
     emitToTenant(invoice.tenantId, 'payment:confirmed', {
       paymentId: payment.id,
       invoiceId: invoice.id,
       invoiceNumber: invoice.invoiceNumber,
       amount: Number(payAmount),
-      provider,
+      provider: normalizedProvider,
       reference: trxId,
+      status: 'SUCCESS',
+      timestamp: new Date().toISOString(),
     });
 
     return {
+      id: invoice.id,
+      invoiceId: invoice.id,
       success: true,
       message: 'Payment verified and invoice settled successfully.',
       invoiceNumber: invoice.invoiceNumber,

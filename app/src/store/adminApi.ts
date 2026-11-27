@@ -5,17 +5,26 @@ export interface AdminTenant {
   name: string;
   slug: string;
   phone: string | null;
-  subscriptionPlan: string;
-  subscriptionStatus: string;
+  status: 'ACTIVE' | 'SUSPENDED' | 'CANCELLED';
   createdAt: string;
-  usersCount?: number;
-  productsCount?: number;
-  invoicesCount?: number;
+  counts?: {
+    users: number;
+    products: number;
+    invoices: number;
+  };
+}
+
+export interface AdminTenantListResponse {
+  tenants: AdminTenant[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 export const adminApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getAdminTenants: builder.query<{ success: boolean; data: AdminTenant[] }, void>({
+    getAdminTenants: builder.query<{ success: boolean; data: AdminTenantListResponse }, void>({
       query: () => '/admin/tenants',
       providesTags: ['AuditLog'],
     }),
@@ -36,18 +45,6 @@ export const adminApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['AuditLog'],
     }),
-
-    assignTenantSubscription: builder.mutation<
-      { success: boolean; message: string },
-      { id: string; planCode: string }
-    >({
-      query: ({ id, planCode }) => ({
-        url: `/admin/tenants/${id}/subscription`,
-        method: 'POST',
-        body: { planCode },
-      }),
-      invalidatesTags: ['AuditLog'],
-    }),
   }),
 });
 
@@ -55,5 +52,4 @@ export const {
   useGetAdminTenantsQuery,
   useGetAdminTenantDetailsQuery,
   useUpdateTenantStatusMutation,
-  useAssignTenantSubscriptionMutation,
 } = adminApi;

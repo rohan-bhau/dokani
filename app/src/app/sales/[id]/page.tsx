@@ -62,9 +62,8 @@ export default function SaleDetailPage() {
   };
 
   const handleCopyPaymentLink = () => {
-    if (invoice?.idempotencyKey) {
-      // paymentToken or public payment url
-      const url = `${window.location.origin}/pay/${invoice.idempotencyKey}`;
+    if (invoice?.paymentToken) {
+      const url = `${window.location.origin}/pay/${invoice.paymentToken}?provider=SSLCOMMERZ`;
       navigator.clipboard.writeText(url);
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2000);
@@ -128,6 +127,17 @@ export default function SaleDetailPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {invoice.status === 'COMPLETED' && invoice.dueTotal > 0 && invoice.paymentToken && (
+              <button
+                type="button"
+                onClick={handleCopyPaymentLink}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 rounded-lg text-xs font-semibold whitespace-nowrap transition"
+              >
+                {copiedLink ? <CheckCircle2 className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+                {copiedLink ? 'Payment Link Copied' : 'Copy Payment Link'}
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => setIsPrintModalOpen(true)}

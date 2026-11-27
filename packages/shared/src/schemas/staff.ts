@@ -5,7 +5,13 @@ export const createStaffSchema = z
   .object({
     name: z.string().trim().min(2, 'Name must be at least 2 characters').max(100),
     phone: z.string().trim().regex(phoneRegex, 'Invalid Bangladeshi mobile number'),
-    email: z.string().trim().email('Invalid email address').optional(),
+    email: z
+      .string()
+      .trim()
+      .email('Invalid email address')
+      .optional()
+      .or(z.literal(''))
+      .transform((val) => (val === '' ? undefined : val)),
     password: z.string().min(8, 'Password must be at least 8 characters').max(100),
     roleId: z.string().uuid('Invalid role ID'),
   })

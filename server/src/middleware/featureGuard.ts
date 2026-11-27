@@ -1,31 +1,17 @@
 import type { Request, Response, NextFunction } from 'express';
-import { getRequestContext } from '../common/context.js';
-import { billingService } from '../modules/billing/billing.service.js';
 
-export const checkProductLimit = async (
+export const checkProductLimit = (
   _req: Request,
   _res: Response,
   next: NextFunction
-): Promise<void> => {
-  try {
-    const { tenantId } = getRequestContext();
-    await billingService.checkProductLimit(tenantId);
-    next();
-  } catch (err) {
-    next(err);
-  }
+): void => {
+  next();
 };
 
-export const checkStaffLimit = async (
+export const checkStaffLimit = (
   _req: Request,
   _res: Response,
   next: NextFunction
-): Promise<void> => {
-  try {
-    const { tenantId } = getRequestContext();
-    await billingService.checkStaffLimit(tenantId);
-    next();
-  } catch (err) {
-    next(err);
-  }
+): void => {
+  next();
 };

@@ -4,19 +4,14 @@ import { prisma } from '../src/config/prisma.js';
 import { redis } from '../src/config/redis.js';
 import { signAccessToken } from '../src/modules/auth/auth.jwt.js';
 
-describe('SaaS Billing, Quota Guards & Platform Admin Tests (Phase 8)', () => {
+describe('Unlimited Store Resources & Platform Admin Tests', () => {
   const app = createApp();
   let tenantId: string;
   let ownerToken: string;
   let adminToken: string;
 
   beforeAll(async () => {
-    // Cascade table cleanup
     await prisma.subscription.deleteMany();
-    await prisma.plan.updateMany({
-      where: { code: 'FREE' },
-      data: { maxProducts: 50 },
-    });
     await prisma.webhookEvent.deleteMany();
     await prisma.purchaseItem.deleteMany();
     await prisma.purchase.deleteMany();
@@ -39,9 +34,8 @@ describe('SaaS Billing, Quota Guards & Platform Admin Tests (Phase 8)', () => {
     await prisma.user.deleteMany();
     await prisma.tenant.deleteMany();
 
-    // 1. Create a Store Owner
     const signupRes = await request(app).post('/api/v1/auth/signup').send({
-      tenantName: 'SaaS Super Shop',
+      tenantName: 'Dhaka Retail Mart',
       name: 'Tanvir Owner',
       phone: '01700000001',
       email: 'tanvir@dokani.test',
@@ -51,7 +45,6 @@ describe('SaaS Billing, Quota Guards & Platform Admin Tests (Phase 8)', () => {
     tenantId = signupRes.body.data.user.tenant.id;
     ownerToken = signupRes.body.data.tokens.accessToken;
 
-    // 2. Create a Platform Admin token with platform:manage permission
     adminToken = signAccessToken({
       userId: '00000000-0000-0000-0000-000000000001',
       tenantId,
@@ -60,105 +53,85 @@ describe('SaaS Billing, Quota Guards & Platform Admin Tests (Phase 8)', () => {
   });
 
   afterAll(async () => {
-    await prisma.plan.updateMany({
-      where: { code: 'FREE' },
-      data: { maxProducts: 50 },
-    });
     await prisma.$disconnect();
     redis.disconnect();
   });
 
-  it('should list all standard SaaS plans publicly', async () => {
-    const res = await request(app).get('/api/v1/billing/plans');
-
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(Array.isArray(res.body.data)).toBe(true);
-    expect(res.body.data.length).toBeGreaterThanOrEqual(4);
-
-    const codes = res.body.data.map((p: { code: string }) => p.code);
-    expect(codes).toContain('FREE');
-    expect(codes).toContain('STARTER');
-    expect(codes).toContain('PRO');
-    expect(codes).toContain('ENTERPRISE');
-  });
-
-  it('should auto-assign FREE plan to tenant and return active subscription', async () => {
-    const res = await request(app)
-      .get('/api/v1/billing/subscription')
-      .set('Authorization', `Bearer ${ownerToken}`);
-
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.data.plan.code).toBe('FREE');
-    expect(res.body.data.status).toBe('ACTIVE');
-  });
-
-  it('should enforce product creation quota limit when plan limit is reached', async () => {
-    // Temporarily set FREE plan maxProducts = 1 for testing limit enforcement
-    await prisma.plan.update({
-      where: { code: 'FREE' },
-      data: { maxProducts: 1 },
-    });
-
-    // 1. First product should succeed
+  it('should allow newly registered store to add multiple products without plan quota restrictions', async () => {
     const firstProd = await request(app)
       .post('/api/v1/products')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
-        name: 'Allowed Item 1',
-        sku: 'ALLOWED-01',
-        costPrice: 50,
-        sellPrice: 75,
+        name: 'Miniket Rice 5kg',
+        sku: 'RICE-01',
+        costPrice: 350,
+        sellPrice: 420,
       });
 
     expect(firstProd.status).toBe(201);
 
-    // 2. Second product should be blocked with 403 Forbidden by featureGuard
     const secondProd = await request(app)
       .post('/api/v1/products')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
-        name: 'Blocked Item 2',
-        sku: 'BLOCKED-02',
-        costPrice: 100,
-        sellPrice: 150,
-      });
-
-    expect(secondProd.status).toBe(403);
-    expect(secondProd.body.code).toBe('FORBIDDEN');
-    expect(secondProd.body.message).toContain('limit of 1 products');
-  });
-
-  it('should allow merchant to upgrade plan and bypass earlier limit', async () => {
-    // Upgrade to PRO plan
-    const upgradeRes = await request(app)
-      .post('/api/v1/billing/subscribe')
-      .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ planCode: 'PRO' });
-
-    expect(upgradeRes.status).toBe(200);
-    expect(upgradeRes.body.success).toBe(true);
-    expect(upgradeRes.body.data.plan.code).toBe('PRO');
-
-    // Now adding the second product should succeed!
-    const secondProd = await request(app)
-      .post('/api/v1/products')
-      .set('Authorization', `Bearer ${ownerToken}`)
-      .send({
-        name: 'Now Allowed Item 2',
-        sku: 'ALLOWED-02',
-        costPrice: 100,
-        sellPrice: 150,
+        name: 'Soybean Oil 2L',
+        sku: 'OIL-02',
+        costPrice: 310,
+        sellPrice: 360,
       });
 
     expect(secondProd.status).toBe(201);
+  });
 
-    // Restore standard FREE plan quota limit so subsequent tests are unaffected
-    await prisma.plan.update({
-      where: { code: 'FREE' },
-      data: { maxProducts: 50 },
-    });
+  it('should allow newly registered store to add multiple staff members without plan quota errors', async () => {
+    const rolesRes = await request(app)
+      .get('/api/v1/staff/roles/permissions')
+      .set('Authorization', `Bearer ${ownerToken}`);
+
+    expect(rolesRes.status).toBe(200);
+    const roles: Array<{ id: string; name: string }> = rolesRes.body.data.roles;
+    const cashierRole = roles.find((r) => r.name === 'CASHIER');
+    const managerRole = roles.find((r) => r.name === 'MANAGER');
+
+    expect(cashierRole).toBeDefined();
+    expect(managerRole).toBeDefined();
+
+    const firstStaff = await request(app)
+      .post('/api/v1/staff')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        name: 'Rafiqul Cashier',
+        phone: '01711223344',
+        email: '',
+        password: 'Password123!',
+        roleId: cashierRole!.id,
+      });
+
+    expect(firstStaff.status).toBe(201);
+    expect(firstStaff.body.success).toBe(true);
+    expect(firstStaff.body.data.role).toBe('CASHIER');
+
+    const secondStaff = await request(app)
+      .post('/api/v1/staff')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        name: 'Nusrat Manager',
+        phone: '01811223355',
+        email: 'nusrat@dokani.test',
+        password: 'Password123!',
+        roleId: managerRole!.id,
+      });
+
+    expect(secondStaff.status).toBe(201);
+    expect(secondStaff.body.success).toBe(true);
+    expect(secondStaff.body.data.role).toBe('MANAGER');
+
+    const staffList = await request(app)
+      .get('/api/v1/staff')
+      .set('Authorization', `Bearer ${ownerToken}`);
+
+    expect(staffList.status).toBe(200);
+    expect(staffList.body.data.users.length).toBe(3);
   });
 
   it('should reject non-admin access to platform admin endpoints with 403', async () => {
@@ -171,7 +144,6 @@ describe('SaaS Billing, Quota Guards & Platform Admin Tests (Phase 8)', () => {
   });
 
   it('should allow platform admin to list tenants, view details, and suspend/reactivate', async () => {
-    // 1. List all tenants
     const listRes = await request(app)
       .get('/api/v1/admin/tenants')
       .set('Authorization', `Bearer ${adminToken}`);
@@ -182,18 +154,16 @@ describe('SaaS Billing, Quota Guards & Platform Admin Tests (Phase 8)', () => {
 
     const targetTenant = listRes.body.data.tenants.find((t: { id: string }) => t.id === tenantId);
     expect(targetTenant).toBeDefined();
-    expect(targetTenant.name).toBe('SaaS Super Shop');
+    expect(targetTenant.name).toBe('Dhaka Retail Mart');
+    expect(targetTenant.status).toBe('ACTIVE');
 
-    // 2. View tenant detailed profile
     const detailsRes = await request(app)
       .get(`/api/v1/admin/tenants/${tenantId}`)
       .set('Authorization', `Bearer ${adminToken}`);
 
     expect(detailsRes.status).toBe(200);
     expect(detailsRes.body.data.id).toBe(tenantId);
-    expect(detailsRes.body.data.subscriptions.length).toBeGreaterThanOrEqual(1);
 
-    // 3. Suspend tenant
     const suspendRes = await request(app)
       .patch(`/api/v1/admin/tenants/${tenantId}/status`)
       .set('Authorization', `Bearer ${adminToken}`)
@@ -202,7 +172,6 @@ describe('SaaS Billing, Quota Guards & Platform Admin Tests (Phase 8)', () => {
     expect(suspendRes.status).toBe(200);
     expect(suspendRes.body.data.status).toBe('SUSPENDED');
 
-    // 4. Reactivate tenant
     const activateRes = await request(app)
       .patch(`/api/v1/admin/tenants/${tenantId}/status`)
       .set('Authorization', `Bearer ${adminToken}`)
