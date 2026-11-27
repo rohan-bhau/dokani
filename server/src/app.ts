@@ -51,6 +51,15 @@ export const createApp = (): Express => {
     });
   });
 
+  app.get('/health', (_req, res) => {
+    res.status(200).json({
+      success: true,
+      status: 'ok',
+      uptime: Math.floor(process.uptime()),
+      timestamp: new Date().toISOString(),
+    });
+  });
+
   app.get('/api/v1/health', async (_req, res) => {
     let dbStatus = 'healthy';
     let redisStatus = 'healthy';
